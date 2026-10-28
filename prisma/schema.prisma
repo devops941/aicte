@@ -1,0 +1,549 @@
+// AICTE Approval Workflow, SLA & Compliance Platform (SIH26262)
+// 13 source tables + 6 additions (regions, workflow_transitions, clarification_requests,
+// holidays, escalation_policies, worker_heartbeats) = 19 tables.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  INSTITUTION_ADMIN
+  REGIONAL_OFFICER
+  BUREAU_OFFICER
+  EVC_MEMBER
+  COMPETENT_AUTHORITY
+  SYSTEM_ADMIN
+  AUDITOR
+}
+
+enum ApplicationStatus {
+  DRAFT
+  SUBMITTED
+  IN_PROCESS
+  RETURNED_FOR_CLARIFICATION
+  SCHEDULED_EVC
+  PENDING_DECISION
+  APPROVED
+  REJECTED
+  WITHDRAWN
+}
+
+enum ApplicationType {
+  NEW_ENGINEERING
+  EXTENSION_OF_APPROVAL
+  INCREASE_IN_INTAKE
+  NEW_COURSE
+  CLOSURE
+  OTHERS
+}
+
+enum SlaState {
+  ON_TRACK
+  DUE_SOON
+  OVERDUE
+  PAUSED
+  MET
+  BREACHED
+}
+
+enum ClarificationStatus {
+  OPEN
+  RESPONDED
+  CLOSED
+  CANCELLED
+}
+
+enum EvcStatus {
+  PROPOSED
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+enum UndertakingStatus {
+  OPEN
+  SUBMITTED
+  VERIFIED
+  REJECTED
+  OVERDUE
+}
+
+enum SubmissionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum NotificationKind {
+  SLA_DUE_SOON
+  SLA_OVERDUE
+  ESCALATION
+  EVC_REMINDER
+  CLARIFICATION_RAISED
+  CLARIFICATION_RESPONDED
+  DOCUMENT_EXPIRY
+  UNDERTAKING_DUE
+  ASSIGNMENT
+  DECISION
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+}
+
+enum NotificationStatus {
+  QUEUED
+  SENT
+  FAILED
+  SKIPPED
+}
+
+enum DocumentOwnerType {
+  APPLICATION
+  INSTITUTION
+  UNDERTAKING
+  COMPLIANCE_SUBMISSION
+  EVC_REPORT
+  USER
+}
+
+enum WorkflowAction {
+  SUBMIT
+  SCRUTINIZE
+  RETURN_FOR_CLARIFICATION
+  RESPOND_CLARIFICATION
+  FORWARD
+  RE_SCRUTINIZE
+  SCHEDULE_EVC
+  COMPLETE_EVC
+  RECOMMEND
+  APPROVE
+  REJECT
+  WITHDRAW
+  RESUBMIT
+}
+
+model Region {
+  id                 String             @id @default(uuid()) @db.Uuid
+  code               String             @unique
+  name               String
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  users              User[]
+  institutions       Institution[]
+  holidays           Holiday[]
+  escalationPolicies EscalationPolicy[]
+
+  @@map("regions")
+}
+
+model User {
+  id                  String    @id @default(uuid()) @db.Uuid
+  email               String    @unique
+  name                String
+  passwordHash        String
+  role                Role
+  regionId            String?   @db.Uuid
+  institutionId       String?   @db.Uuid
+  phone               String?
+  designation         String?
+  isActive            Boolean   @default(true)
+  totpSecret          String?
+  totpEnabled         Boolean   @default(false)
+  failedLoginCount    Int       @default(0)
+  lockedUntil         DateTime?
+  lastLoginAt         DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  region              Region?   @relation(fields: [regionId], references: [id], onDelete: SetNull)
+  institution         Institution? @relation(fields: [institutionId], references: [id], onDelete: SetNull)
+
+  assignments         Assignment[]
+  stageHistory        ApplicationStageHistory[] @relation("StageActor")
+  clarificationRaised ClarificationRequest[]    @relation("ClarificationRaisedBy")
+  clarificationAnswered ClarificationRequest[]  @relation("ClarificationRespondedBy")
+  notifications       Notification[]
+  auditLogs           AuditLog[]
+  submissions         ComplianceSubmission[]    @relation("SubmissionVerifier")
+
+  @@index([role])
+  @@index([regionId])
+  @@index([institutionId])
+  @@map("users")
+}
+
+model Institution {
+  id           String   @id @default(uuid()) @db.Uuid
+  aicteId      String   @unique
+  name         String
+  state        String
+  district     String?
+  city         String?
+  regionId     String   @db.Uuid
+  contactEmail String?
+  contactPhone String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  region       Region        @relation(fields: [regionId], references: [id])
+  users        User[]
+  applications Application[]
+  undertakings  Undertaking[]
+
+  @@index([regionId])
+  @@index([state])
+  @@map("institutions")
+}
+
+model Application {
+  id                String            @id @default(uuid()) @db.Uuid
+  appNo             String            @unique
+  type              ApplicationType
+  status            ApplicationStatus @default(DRAFT)
+  institutionId     String            @db.Uuid
+  currentStageId    String?           @db.Uuid
+  workflowVersionId String?           @db.Uuid
+  regionId          String            @db.Uuid
+  title             String
+  summary           String?
+  intakeRequested   Int?
+  courseName        String?
+  submittedAt       DateTime?
+  decidedAt         DateTime?
+  slaDueAt          DateTime?
+  slaPausedAt       DateTime?
+  slaPausedMs       BigInt            @default(0)
+  slaState          SlaState          @default(ON_TRACK)
+  createdById       String?           @db.Uuid
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  institution       Institution         @relation(fields: [institutionId], references: [id])
+  currentStage      WorkflowStage?      @relation("CurrentStage", fields: [currentStageId], references: [id], onDelete: SetNull)
+  workflowVersion   WorkflowDefinition? @relation(fields: [workflowVersionId], references: [id], onDelete: SetNull)
+
+  stageHistory      ApplicationStageHistory[]
+  assignments       Assignment[]
+  clarifications    ClarificationRequest[]
+  evcSchedules      EvcSchedule[]
+  undertakings      Undertaking[]
+  documents         Document[]
+
+  @@index([institutionId])
+  @@index([regionId])
+  @@index([status])
+  @@index([slaState])
+  @@index([type])
+  @@map("applications")
+}
+
+model WorkflowDefinition {
+  id              String          @id @default(uuid()) @db.Uuid
+  code            String
+  name            String
+  applicationType ApplicationType
+  version         Int             @default(1)
+  isActive        Boolean         @default(true)
+  description     String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  stages          WorkflowStage[]
+  applications    Application[]
+
+  @@unique([code, version])
+  @@index([applicationType, isActive])
+  @@map("workflow_definitions")
+}
+
+model WorkflowStage {
+  id             String   @id @default(uuid()) @db.Uuid
+  definitionId   String   @db.Uuid
+  code           String
+  name           String
+  sequence       Int
+  slaWorkingDays Int      @default(10)
+  isInitial      Boolean  @default(false)
+  isTerminal     Boolean  @default(false)
+  assigneeRole   Role
+  description    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  definition     WorkflowDefinition    @relation(fields: [definitionId], references: [id], onDelete: Cascade)
+  outgoing       WorkflowTransition[]  @relation("FromStage")
+  incoming       WorkflowTransition[]  @relation("ToStage")
+  history        ApplicationStageHistory[]
+  assignments    Assignment[]
+  currentFor     Application[]         @relation("CurrentStage")
+
+  @@unique([definitionId, code])
+  @@index([definitionId, sequence])
+  @@map("workflow_stages")
+}
+
+model WorkflowTransition {
+  id             String         @id @default(uuid()) @db.Uuid
+  fromStageId    String         @db.Uuid
+  toStageId      String         @db.Uuid
+  action         WorkflowAction
+  requiredRole   Role
+  requiresRemark Boolean        @default(false)
+  label          String?
+  createdAt      DateTime       @default(now())
+
+  fromStage      WorkflowStage  @relation("FromStage", fields: [fromStageId], references: [id], onDelete: Cascade)
+  toStage        WorkflowStage  @relation("ToStage", fields: [toStageId], references: [id], onDelete: Cascade)
+
+  @@unique([fromStageId, toStageId, action])
+  @@index([fromStageId])
+  @@map("workflow_transitions")
+}
+
+model ApplicationStageHistory {
+  id            String         @id @default(uuid()) @db.Uuid
+  applicationId String         @db.Uuid
+  stageId       String?        @db.Uuid
+  action        WorkflowAction
+  actorId       String?        @db.Uuid
+  actorRole     Role?
+  remark        String?
+  fromStageId   String?        @db.Uuid
+  enteredAt     DateTime       @default(now())
+  exitedAt      DateTime?
+  daysInStage   Int?
+  slaMet        Boolean?
+
+  application   Application    @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  stage         WorkflowStage? @relation(fields: [stageId], references: [id], onDelete: SetNull)
+  actor         User?          @relation("StageActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([applicationId, enteredAt])
+  @@index([stageId])
+  @@map("application_stage_history")
+}
+
+model Assignment {
+  id            String        @id @default(uuid()) @db.Uuid
+  applicationId String        @db.Uuid
+  userId        String        @db.Uuid
+  stageId       String?       @db.Uuid
+  assignedAt    DateTime      @default(now())
+  releasedAt    DateTime?
+  assignedById  String?       @db.Uuid
+  note          String?
+
+  application   Application   @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stage         WorkflowStage? @relation(fields: [stageId], references: [id], onDelete: SetNull)
+
+  @@index([userId, releasedAt])
+  @@index([applicationId])
+  @@map("assignments")
+}
+
+model ClarificationRequest {
+  id            String              @id @default(uuid()) @db.Uuid
+  applicationId String              @db.Uuid
+  stageId       String?             @db.Uuid
+  raisedById    String?             @db.Uuid
+  respondedById String?             @db.Uuid
+  reason        String
+  response      String?
+  dueAt         DateTime?
+  respondedAt   DateTime?
+  status        ClarificationStatus @default(OPEN)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  application   Application         @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  raisedBy      User?               @relation("ClarificationRaisedBy", fields: [raisedById], references: [id], onDelete: SetNull)
+  respondedBy   User?               @relation("ClarificationRespondedBy", fields: [respondedById], references: [id], onDelete: SetNull)
+
+  @@index([applicationId, status])
+  @@map("clarification_requests")
+}
+
+model EvcSchedule {
+  id            String    @id @default(uuid()) @db.Uuid
+  applicationId String    @db.Uuid
+  scheduledFor  DateTime
+  status        EvcStatus @default(PROPOSED)
+  memberIds     String[]  @db.Uuid
+  venue         String?
+  reportDocId   String?   @db.Uuid
+  notes         String?
+  completedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId, status])
+  @@index([scheduledFor])
+  @@map("evc_schedules")
+}
+
+model Undertaking {
+  id            String            @id @default(uuid()) @db.Uuid
+  institutionId String            @db.Uuid
+  applicationId String?           @db.Uuid
+  title         String
+  description   String?
+  dueAt         DateTime
+  status        UndertakingStatus @default(OPEN)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  institution   Institution       @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  application   Application?      @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  submissions   ComplianceSubmission[]
+
+  @@index([institutionId, status])
+  @@index([dueAt])
+  @@map("undertakings")
+}
+
+model ComplianceSubmission {
+  id            String           @id @default(uuid()) @db.Uuid
+  undertakingId String           @db.Uuid
+  documentId    String?          @db.Uuid
+  status        SubmissionStatus @default(PENDING)
+  verifierId    String?          @db.Uuid
+  remark        String?
+  submittedAt   DateTime         @default(now())
+  verifiedAt    DateTime?
+
+  undertaking   Undertaking      @relation(fields: [undertakingId], references: [id], onDelete: Cascade)
+  verifier      User?            @relation("SubmissionVerifier", fields: [verifierId], references: [id], onDelete: SetNull)
+
+  @@index([undertakingId, status])
+  @@map("compliance_submissions")
+}
+
+model Document {
+  id            String            @id @default(uuid()) @db.Uuid
+  ownerType     DocumentOwnerType
+  ownerId       String            @db.Uuid
+  applicationId String?           @db.Uuid
+  kind          String
+  label         String?
+  fileKey       String
+  fileName      String
+  mimeType      String
+  sizeBytes     Int               @default(0)
+  expiresAt     DateTime?
+  extractedJson Json?
+  uploadedById  String?           @db.Uuid
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  application   Application?      @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([ownerType, ownerId])
+  @@index([expiresAt])
+  @@map("documents")
+}
+
+model Holiday {
+  id        String   @id @default(uuid()) @db.Uuid
+  date      DateTime @db.Date
+  regionId  String?  @db.Uuid
+  label     String
+  createdAt DateTime @default(now())
+
+  region    Region?  @relation(fields: [regionId], references: [id], onDelete: Cascade)
+
+  @@unique([date, regionId])
+  @@index([date])
+  @@map("holidays")
+}
+
+model EscalationPolicy {
+  id               String              @id @default(uuid()) @db.Uuid
+  scope            ApplicationType?
+  regionId         String?             @db.Uuid
+  level            Int
+  afterWorkingDays Int
+  targetRole       Role
+  channel          NotificationChannel @default(IN_APP)
+  isActive         Boolean             @default(true)
+  description      String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  region           Region?             @relation(fields: [regionId], references: [id], onDelete: Cascade)
+
+  @@unique([scope, regionId, level])
+  @@index([level])
+  @@map("escalation_policies")
+}
+
+model Notification {
+  id         String              @id @default(uuid()) @db.Uuid
+  userId     String              @db.Uuid
+  kind       NotificationKind
+  dedupeKey  String              @unique
+  channel    NotificationChannel @default(IN_APP)
+  status     NotificationStatus  @default(QUEUED)
+  title      String
+  body       String?
+  link       String?
+  entityType String?
+  entityId   String?             @db.Uuid
+  attempts   Int                 @default(0)
+  lastError  String?
+  sentAt     DateTime?
+  readAt     DateTime?
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([status, attempts])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  seq        BigInt   @default(autoincrement())
+  actorId    String?  @db.Uuid
+  actorEmail String?
+  action     String
+  entityType String
+  entityId   String?
+  before     Json?
+  after      Json?
+  ip         String?
+  userAgent  String?
+  prevHash   String?
+  hash       String   @unique
+  createdAt  DateTime @default(now())
+
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model WorkerHeartbeat {
+  id        String   @id @default(uuid()) @db.Uuid
+  job       String   @unique
+  lastRunAt DateTime @default(now())
+  status    String   @default("OK")
+  detail    String?
+  runCount  BigInt   @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@map("worker_heartbeats")
+}

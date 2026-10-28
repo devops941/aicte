@@ -1,0 +1,148 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Light, calm government-grade palette. Cool neutrals, one confident blue. */
+    --canvas: 247 249 252;
+    --surface: 255 255 255;
+    --line: 226 232 240;
+    --ink: 15 23 42;
+    --muted: 100 116 139;
+    --brand: 37 99 235;
+    --brand-soft: 239 246 255;
+    --brand-ink: 30 64 175;
+    --ok: 16 145 105;
+    --warn: 202 138 4;
+    --danger: 220 38 38;
+    --info: 2 132 199;
+  }
+
+  .dark {
+    --canvas: 9 13 22;
+    --surface: 17 24 39;
+    --line: 38 48 68;
+    --ink: 237 242 250;
+    --muted: 148 163 184;
+    --brand: 96 165 250;
+    --brand-soft: 23 37 66;
+    --brand-ink: 191 219 254;
+    --ok: 52 211 153;
+    --warn: 251 191 36;
+    --danger: 248 113 113;
+    --info: 56 189 248;
+  }
+
+  * {
+    border-color: rgb(var(--line));
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: rgb(var(--canvas));
+    color: rgb(var(--ink));
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: rgb(var(--brand) / 0.2);
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-line bg-surface shadow-soft;
+  }
+
+  .card-pad {
+    @apply p-5 sm:p-6;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium
+           transition-all duration-200 focus-visible:outline-none focus-visible:ring-2
+           focus-visible:ring-brand/50 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas
+           disabled:cursor-not-allowed disabled:opacity-50 active:scale-[.98];
+  }
+
+  .btn-primary {
+    @apply btn bg-brand text-white shadow-soft hover:bg-brand-ink hover:shadow-lift;
+  }
+
+  .btn-ghost {
+    @apply btn border border-line bg-surface text-ink hover:border-brand/40 hover:bg-brand-soft;
+  }
+
+  .btn-danger {
+    @apply btn bg-danger text-white hover:opacity-90;
+  }
+
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs;
+  }
+
+  .input {
+    @apply w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm text-ink
+           placeholder:text-muted/70 transition-all duration-200
+           focus:border-brand/60 focus:outline-none focus:ring-4 focus:ring-brand/10;
+  }
+
+  .label {
+    @apply mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium;
+  }
+
+  .skeleton {
+    @apply rounded-lg bg-gradient-to-r from-line via-surface to-line bg-[length:500px_100%] animate-shimmer;
+  }
+
+  .table-wrap {
+    @apply overflow-x-auto rounded-2xl border border-line bg-surface;
+  }
+
+  .th {
+    @apply whitespace-nowrap px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted;
+  }
+
+  .td {
+    @apply whitespace-nowrap border-t border-line px-4 py-3.5 text-sm;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: rgb(var(--line));
+    border-radius: 9999px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .grid-noise {
+    background-image: radial-gradient(rgb(var(--line)) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
