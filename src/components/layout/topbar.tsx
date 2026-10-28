@@ -4,22 +4,37 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { signOut } from "next-auth/react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Bell, ChevronDown, LogOut, Menu, Moon, Sun, User as UserIcon } from "lucide-react";
+import { Bell, ChevronDown, LogOut, Menu, Moon, PanelLeftClose, PanelLeftOpen, Sun, User as UserIcon } from "lucide-react";
 import { ROLE_LABELS } from "@/lib/constants";
 import { cn, initials } from "@/lib/utils";
 
 export function Topbar({
   user,
   unread,
+  sidebarCollapsed,
+  onToggleSidebar,
   onOpenMobile,
 }: {
   user: { name: string; email: string; role: string; scopeLabel: string };
   unread: number;
+  sidebarCollapsed?: boolean;
+  onToggleSidebar?: () => void;
   onOpenMobile: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [dark, setDark] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") {
+        e.preventDefault();
+        onToggleSidebar?.();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onToggleSidebar]);
 
   useEffect(() => {
     const stored = window.localStorage.getItem("aicte-theme");
@@ -47,13 +62,26 @@ export function Topbar({
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-surface/85 backdrop-blur-md">
       <div className="flex h-16 items-center gap-3 px-4 sm:px-6">
+        {/* Mobile menu toggle */}
         <button
           type="button"
           onClick={onOpenMobile}
           className="rounded-lg p-2 text-muted transition-colors hover:bg-canvas hover:text-ink lg:hidden"
           aria-label="Open navigation"
+          title="Open navigation"
         >
           <Menu className="h-5 w-5" />
+        </button>
+
+        {/* Desktop sidebar collapse/expand toggle */}
+        <button
+          type="button"
+          onClick={onToggleSidebar}
+          className="hidden rounded-lg p-2 text-muted transition-colors hover:bg-canvas hover:text-ink lg:flex items-center justify-center"
+          aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          title={sidebarCollapsed ? "Expand sidebar (Ctrl+B)" : "Collapse sidebar (Ctrl+B)"}
+        >
+          {sidebarCollapsed ? <PanelLeftOpen className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
         </button>
 
         <div className="hidden min-w-0 flex-1 sm:block">

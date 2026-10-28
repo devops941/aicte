@@ -68,19 +68,43 @@ export function Sidebar({
 
   const content = (
     <div className="flex h-full flex-col gap-1 p-3">
-      <div className={cn("mb-2 flex items-center gap-2.5 px-2 py-2", collapsed && "justify-center")}>
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand text-sm font-bold text-white shadow-glow">
-          A
+      {/* Header with Logo and Collapse Toggle */}
+      <div className={cn("mb-2 flex items-center justify-between gap-2 px-2 py-1.5", collapsed && "justify-center")}>
+        <div className="flex items-center gap-2.5 min-w-0">
+          <button
+            type="button"
+            onClick={collapsed ? onToggle : undefined}
+            className={cn(
+              "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand text-sm font-bold text-white shadow-glow transition-transform",
+              collapsed && "hover:scale-105 cursor-pointer"
+            )}
+            title={collapsed ? "Click to expand sidebar (Ctrl+B)" : undefined}
+          >
+            A
+          </button>
+          {!collapsed && (
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold leading-tight text-ink">AICTE Portal</p>
+              <p className="truncate text-[11px] text-muted">Approval Workflow</p>
+            </div>
+          )}
         </div>
+
         {!collapsed && (
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold leading-tight text-ink">AICTE Portal</p>
-            <p className="truncate text-[11px] text-muted">Approval Workflow</p>
-          </div>
+          <button
+            type="button"
+            onClick={onToggle}
+            className="hidden lg:flex h-7 w-7 items-center justify-center rounded-lg text-muted hover:bg-canvas hover:text-ink transition-colors"
+            title="Collapse sidebar (Ctrl+B)"
+            aria-label="Collapse sidebar"
+          >
+            <ChevronsLeft className="h-4 w-4" />
+          </button>
         )}
       </div>
 
-      <nav className="flex flex-1 flex-col gap-0.5">
+      {/* Scrollable Navigation Menu */}
+      <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto overflow-x-hidden scrollbar-thin py-1 pr-1">
         {items.map((item) => {
           const Icon = ICONS[item.icon] ?? LayoutDashboard;
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -121,14 +145,22 @@ export function Sidebar({
         })}
       </nav>
 
-      <button
-        type="button"
-        onClick={onToggle}
-        className="hidden items-center justify-center gap-2 rounded-xl border border-line px-3 py-2 text-xs font-medium text-muted transition-colors hover:bg-canvas hover:text-ink lg:flex"
-      >
-        {collapsed ? <ChevronsRight className="h-4 w-4" /> : <ChevronsLeft className="h-4 w-4" />}
-        {!collapsed && "Collapse"}
-      </button>
+      {/* Pinned Bottom Collapse / Expand Toggle */}
+      <div className="mt-auto pt-2 border-t border-line/70 shrink-0">
+        <button
+          type="button"
+          onClick={onToggle}
+          className={cn(
+            "hidden items-center rounded-xl border border-line py-2 text-xs font-medium text-muted transition-colors hover:bg-canvas hover:text-ink lg:flex w-full",
+            collapsed ? "justify-center px-2" : "justify-between px-3"
+          )}
+          title={collapsed ? "Expand sidebar (Ctrl+B)" : "Collapse sidebar (Ctrl+B)"}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {!collapsed && <span>Collapse sidebar</span>}
+          {collapsed ? <ChevronsRight className="h-4 w-4" /> : <ChevronsLeft className="h-4 w-4" />}
+        </button>
+      </div>
     </div>
   );
 
@@ -137,7 +169,7 @@ export function Sidebar({
       <aside
         className={cn(
           "sticky top-0 hidden h-screen shrink-0 border-r border-line bg-surface transition-[width] duration-300 lg:block",
-          collapsed ? "w-[76px]" : "w-64",
+          collapsed ? "w-[72px]" : "w-64",
         )}
       >
         {content}

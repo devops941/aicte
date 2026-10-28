@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 
@@ -16,18 +16,47 @@ export function Shell({
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem("aicte-sidebar-collapsed");
+      if (stored !== null) {
+        setCollapsed(stored === "true");
+      }
+    } catch {
+      // ignore in environments without localStorage
+    }
+  }, []);
+
+  const handleToggle = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem("aicte-sidebar-collapsed", String(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
+
   return (
     <div className="flex min-h-screen bg-canvas">
       <Sidebar
         role={user.role}
         collapsed={collapsed}
-        onToggle={() => setCollapsed((v) => !v)}
+        onToggle={handleToggle}
         mobileOpen={mobileOpen}
         onCloseMobile={() => setMobileOpen(false)}
         unread={unread}
       />
       <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar user={user} unread={unread} onOpenMobile={() => setMobileOpen(true)} />
+        <Topbar
+          user={user}
+          unread={unread}
+          sidebarCollapsed={collapsed}
+          onToggleSidebar={handleToggle}
+          onOpenMobile={() => setMobileOpen(true)}
+        />
         <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
           <div className="mx-auto w-full max-w-7xl">{children}</div>
         </main>

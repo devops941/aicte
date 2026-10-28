@@ -222,20 +222,20 @@ export function CaseList({
       ) : (
         <>
           {/* Table on wide screens */}
-          <div className="table-wrap hidden lg:block animate-fade-up">
-            <table className="w-full">
-              <thead className="bg-canvas">
+          <div className="table-wrap hidden lg:block animate-fade-up overflow-x-auto scrollbar-thin">
+            <table className="w-full min-w-[1020px] text-left border-collapse">
+              <thead className="bg-canvas border-b border-line">
                 <tr>
-                  <th className="th">Application</th>
-                  {showInstitution && <th className="th">Institution</th>}
-                  <th className="th">Stage</th>
-                  <th className="th">Status</th>
-                  <th className="th">Timeline</th>
-                  <th className="th">Deadline</th>
-                  <th className="th">Owner</th>
+                  <th className="th min-w-[260px] pl-5">Application</th>
+                  {showInstitution && <th className="th min-w-[190px]">Institution</th>}
+                  <th className="th min-w-[170px]">Stage</th>
+                  <th className="th min-w-[130px]">Status</th>
+                  <th className="th min-w-[110px]">Timeline</th>
+                  <th className="th min-w-[110px]">Deadline</th>
+                  <th className="th min-w-[130px] pr-6">Owner</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-line">
                 {visible.map((row, i) => {
                   const risk = delayRisk({
                     stageAgeWorkingDays: 0,
@@ -253,21 +253,21 @@ export function CaseList({
                       className="group cursor-pointer transition-colors hover:bg-canvas"
                       onClick={() => router.push(`${basePath}/${row.id}`)}
                     >
-                      <td className="td">
-                        <div className="max-w-xs">
+                      <td className="td pl-5">
+                        <div className="max-w-[280px]">
                           <span className="font-mono text-[11px] font-semibold text-brand">{row.appNo}</span>
-                          <p className="mt-0.5 truncate font-medium text-ink">{row.title}</p>
+                          <p className="mt-0.5 truncate font-medium text-ink" title={row.title}>{row.title}</p>
                           <p className="mt-0.5 text-[11px] text-muted">{TYPE_LABELS[row.type] ?? row.type}</p>
                         </div>
                       </td>
                       {showInstitution && (
                         <td className="td">
-                          <p className="max-w-[180px] truncate text-ink">{row.institution.name}</p>
+                          <p className="max-w-[200px] truncate font-medium text-ink" title={row.institution.name}>{row.institution.name}</p>
                           <p className="text-[11px] text-muted">{row.institution.state}</p>
                         </td>
                       )}
                       <td className="td">
-                        <span className="text-ink">{row.currentStage?.name ?? "—"}</span>
+                        <span className="font-medium text-ink">{row.currentStage?.name ?? "—"}</span>
                       </td>
                       <td className="td">
                         <Badge tone={STATUS_TONE[row.status] ?? "neutral"}>{STATUS_LABELS[row.status] ?? row.status}</Badge>
@@ -278,10 +278,10 @@ export function CaseList({
                         </Badge>
                       </td>
                       <td className="td">
-                        <span className="text-ink">{formatDate(row.slaDueAt)}</span>
+                        <span className="font-medium text-ink">{formatDate(row.slaDueAt)}</span>
                       </td>
-                      <td className="td">
-                        <span className="text-muted">{row.assignments[0]?.user.name ?? "Unassigned"}</span>
+                      <td className="td pr-6">
+                        <span className="font-medium text-muted">{row.assignments[0]?.user.name ?? "Unassigned"}</span>
                       </td>
                     </motion.tr>
                   );
