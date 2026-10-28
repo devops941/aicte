@@ -3,13 +3,14 @@ import { NextResponse } from "next/server";
 import { authConfig, PUBLIC_PATHS } from "@/lib/auth/config";
 
 /**
- * Route protection at the edge. This file must not import Prisma or bcrypt, so
- * it uses only the edge-safe half of the auth config. Scope decisions that need
- * the database are made again inside each route handler.
+ * Route protection at the request boundary. Next 16 runs this on the Node.js
+ * runtime, but it still must not import Prisma or bcrypt: this file runs for
+ * every request, and scope decisions that need the database are made again
+ * inside each route handler.
  */
 const { auth } = NextAuth(authConfig);
 
-export default auth((req) => {
+export const proxy = auth((req) => {
   const { pathname } = req.nextUrl;
   const isPublic = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
