@@ -24,6 +24,11 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   serverExternalPackages: ["@prisma/client", "bcryptjs", "nodemailer", "node-cron", "otplib"],
   typescript: { ignoreBuildErrors: false },
+  // Only affects `next dev`. When the dev server is reached through a tunnel or
+  // proxy host, its HMR and font assets are cross-origin and would otherwise be
+  // blocked, leaving client components unhydrated. Set DEV_ORIGINS to a
+  // comma-separated list of hosts when running behind one.
+  allowedDevOrigins: process.env.DEV_ORIGINS?.split(",").map((h) => h.trim()).filter(Boolean),
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

@@ -17,6 +17,7 @@ enum Role {
   EVC_MEMBER
   COMPETENT_AUTHORITY
   SYSTEM_ADMIN
+  SUPER_ADMIN
   AUDITOR
 }
 
@@ -144,34 +145,34 @@ model Region {
 }
 
 model User {
-  id                  String    @id @default(uuid()) @db.Uuid
-  email               String    @unique
-  name                String
-  passwordHash        String
-  role                Role
-  regionId            String?   @db.Uuid
-  institutionId       String?   @db.Uuid
-  phone               String?
-  designation         String?
-  isActive            Boolean   @default(true)
-  totpSecret          String?
-  totpEnabled         Boolean   @default(false)
-  failedLoginCount    Int       @default(0)
-  lockedUntil         DateTime?
-  lastLoginAt         DateTime?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  id               String    @id @default(uuid()) @db.Uuid
+  email            String    @unique
+  name             String
+  passwordHash     String
+  role             Role
+  regionId         String?   @db.Uuid
+  institutionId    String?   @db.Uuid
+  phone            String?
+  designation      String?
+  isActive         Boolean   @default(true)
+  totpSecret       String?
+  totpEnabled      Boolean   @default(false)
+  failedLoginCount Int       @default(0)
+  lockedUntil      DateTime?
+  lastLoginAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
-  region              Region?   @relation(fields: [regionId], references: [id], onDelete: SetNull)
-  institution         Institution? @relation(fields: [institutionId], references: [id], onDelete: SetNull)
+  region      Region?      @relation(fields: [regionId], references: [id], onDelete: SetNull)
+  institution Institution? @relation(fields: [institutionId], references: [id], onDelete: SetNull)
 
-  assignments         Assignment[]
-  stageHistory        ApplicationStageHistory[] @relation("StageActor")
-  clarificationRaised ClarificationRequest[]    @relation("ClarificationRaisedBy")
-  clarificationAnswered ClarificationRequest[]  @relation("ClarificationRespondedBy")
-  notifications       Notification[]
-  auditLogs           AuditLog[]
-  submissions         ComplianceSubmission[]    @relation("SubmissionVerifier")
+  assignments           Assignment[]
+  stageHistory          ApplicationStageHistory[] @relation("StageActor")
+  clarificationRaised   ClarificationRequest[]    @relation("ClarificationRaisedBy")
+  clarificationAnswered ClarificationRequest[]    @relation("ClarificationRespondedBy")
+  notifications         Notification[]
+  auditLogs             AuditLog[]
+  submissions           ComplianceSubmission[]    @relation("SubmissionVerifier")
 
   @@index([role])
   @@index([regionId])
@@ -196,7 +197,7 @@ model Institution {
   region       Region        @relation(fields: [regionId], references: [id])
   users        User[]
   applications Application[]
-  undertakings  Undertaking[]
+  undertakings Undertaking[]
 
   @@index([regionId])
   @@index([state])
@@ -226,16 +227,16 @@ model Application {
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
 
-  institution       Institution         @relation(fields: [institutionId], references: [id])
-  currentStage      WorkflowStage?      @relation("CurrentStage", fields: [currentStageId], references: [id], onDelete: SetNull)
-  workflowVersion   WorkflowDefinition? @relation(fields: [workflowVersionId], references: [id], onDelete: SetNull)
+  institution     Institution         @relation(fields: [institutionId], references: [id])
+  currentStage    WorkflowStage?      @relation("CurrentStage", fields: [currentStageId], references: [id], onDelete: SetNull)
+  workflowVersion WorkflowDefinition? @relation(fields: [workflowVersionId], references: [id], onDelete: SetNull)
 
-  stageHistory      ApplicationStageHistory[]
-  assignments       Assignment[]
-  clarifications    ClarificationRequest[]
-  evcSchedules      EvcSchedule[]
-  undertakings      Undertaking[]
-  documents         Document[]
+  stageHistory   ApplicationStageHistory[]
+  assignments    Assignment[]
+  clarifications ClarificationRequest[]
+  evcSchedules   EvcSchedule[]
+  undertakings   Undertaking[]
+  documents      Document[]
 
   @@index([institutionId])
   @@index([regionId])
@@ -256,8 +257,8 @@ model WorkflowDefinition {
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
-  stages          WorkflowStage[]
-  applications    Application[]
+  stages       WorkflowStage[]
+  applications Application[]
 
   @@unique([code, version])
   @@index([applicationType, isActive])
@@ -278,12 +279,12 @@ model WorkflowStage {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  definition     WorkflowDefinition    @relation(fields: [definitionId], references: [id], onDelete: Cascade)
-  outgoing       WorkflowTransition[]  @relation("FromStage")
-  incoming       WorkflowTransition[]  @relation("ToStage")
-  history        ApplicationStageHistory[]
-  assignments    Assignment[]
-  currentFor     Application[]         @relation("CurrentStage")
+  definition  WorkflowDefinition        @relation(fields: [definitionId], references: [id], onDelete: Cascade)
+  outgoing    WorkflowTransition[]      @relation("FromStage")
+  incoming    WorkflowTransition[]      @relation("ToStage")
+  history     ApplicationStageHistory[]
+  assignments Assignment[]
+  currentFor  Application[]             @relation("CurrentStage")
 
   @@unique([definitionId, code])
   @@index([definitionId, sequence])
@@ -300,8 +301,8 @@ model WorkflowTransition {
   label          String?
   createdAt      DateTime       @default(now())
 
-  fromStage      WorkflowStage  @relation("FromStage", fields: [fromStageId], references: [id], onDelete: Cascade)
-  toStage        WorkflowStage  @relation("ToStage", fields: [toStageId], references: [id], onDelete: Cascade)
+  fromStage WorkflowStage @relation("FromStage", fields: [fromStageId], references: [id], onDelete: Cascade)
+  toStage   WorkflowStage @relation("ToStage", fields: [toStageId], references: [id], onDelete: Cascade)
 
   @@unique([fromStageId, toStageId, action])
   @@index([fromStageId])
@@ -322,9 +323,9 @@ model ApplicationStageHistory {
   daysInStage   Int?
   slaMet        Boolean?
 
-  application   Application    @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-  stage         WorkflowStage? @relation(fields: [stageId], references: [id], onDelete: SetNull)
-  actor         User?          @relation("StageActor", fields: [actorId], references: [id], onDelete: SetNull)
+  application Application    @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  stage       WorkflowStage? @relation(fields: [stageId], references: [id], onDelete: SetNull)
+  actor       User?          @relation("StageActor", fields: [actorId], references: [id], onDelete: SetNull)
 
   @@index([applicationId, enteredAt])
   @@index([stageId])
@@ -332,18 +333,18 @@ model ApplicationStageHistory {
 }
 
 model Assignment {
-  id            String        @id @default(uuid()) @db.Uuid
-  applicationId String        @db.Uuid
-  userId        String        @db.Uuid
-  stageId       String?       @db.Uuid
-  assignedAt    DateTime      @default(now())
+  id            String    @id @default(uuid()) @db.Uuid
+  applicationId String    @db.Uuid
+  userId        String    @db.Uuid
+  stageId       String?   @db.Uuid
+  assignedAt    DateTime  @default(now())
   releasedAt    DateTime?
-  assignedById  String?       @db.Uuid
+  assignedById  String?   @db.Uuid
   note          String?
 
-  application   Application   @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  stage         WorkflowStage? @relation(fields: [stageId], references: [id], onDelete: SetNull)
+  application Application    @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stage       WorkflowStage? @relation(fields: [stageId], references: [id], onDelete: SetNull)
 
   @@index([userId, releasedAt])
   @@index([applicationId])
@@ -364,9 +365,9 @@ model ClarificationRequest {
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
 
-  application   Application         @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-  raisedBy      User?               @relation("ClarificationRaisedBy", fields: [raisedById], references: [id], onDelete: SetNull)
-  respondedBy   User?               @relation("ClarificationRespondedBy", fields: [respondedById], references: [id], onDelete: SetNull)
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  raisedBy    User?       @relation("ClarificationRaisedBy", fields: [raisedById], references: [id], onDelete: SetNull)
+  respondedBy User?       @relation("ClarificationRespondedBy", fields: [respondedById], references: [id], onDelete: SetNull)
 
   @@index([applicationId, status])
   @@map("clarification_requests")
@@ -385,7 +386,7 @@ model EvcSchedule {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
   @@index([applicationId, status])
   @@index([scheduledFor])
@@ -403,9 +404,9 @@ model Undertaking {
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 
-  institution   Institution       @relation(fields: [institutionId], references: [id], onDelete: Cascade)
-  application   Application?      @relation(fields: [applicationId], references: [id], onDelete: SetNull)
-  submissions   ComplianceSubmission[]
+  institution Institution            @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  application Application?           @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  submissions ComplianceSubmission[]
 
   @@index([institutionId, status])
   @@index([dueAt])
@@ -422,8 +423,8 @@ model ComplianceSubmission {
   submittedAt   DateTime         @default(now())
   verifiedAt    DateTime?
 
-  undertaking   Undertaking      @relation(fields: [undertakingId], references: [id], onDelete: Cascade)
-  verifier      User?            @relation("SubmissionVerifier", fields: [verifierId], references: [id], onDelete: SetNull)
+  undertaking Undertaking @relation(fields: [undertakingId], references: [id], onDelete: Cascade)
+  verifier    User?       @relation("SubmissionVerifier", fields: [verifierId], references: [id], onDelete: SetNull)
 
   @@index([undertakingId, status])
   @@map("compliance_submissions")
@@ -446,7 +447,7 @@ model Document {
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 
-  application   Application?      @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  application Application? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
   @@index([ownerType, ownerId])
   @@index([expiresAt])
@@ -460,7 +461,7 @@ model Holiday {
   label     String
   createdAt DateTime @default(now())
 
-  region    Region?  @relation(fields: [regionId], references: [id], onDelete: Cascade)
+  region Region? @relation(fields: [regionId], references: [id], onDelete: Cascade)
 
   @@unique([date, regionId])
   @@index([date])
@@ -480,7 +481,7 @@ model EscalationPolicy {
   createdAt        DateTime            @default(now())
   updatedAt        DateTime            @updatedAt
 
-  region           Region?             @relation(fields: [regionId], references: [id], onDelete: Cascade)
+  region Region? @relation(fields: [regionId], references: [id], onDelete: Cascade)
 
   @@unique([scope, regionId, level])
   @@index([level])
@@ -506,7 +507,7 @@ model Notification {
   createdAt  DateTime            @default(now())
   updatedAt  DateTime            @updatedAt
 
-  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, status])
   @@index([status, attempts])
@@ -529,7 +530,7 @@ model AuditLog {
   hash       String   @unique
   createdAt  DateTime @default(now())
 
-  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
 
   @@index([entityType, entityId])
   @@index([createdAt])
@@ -546,4 +547,25 @@ model WorkerHeartbeat {
   updatedAt DateTime @updatedAt
 
   @@map("worker_heartbeats")
+}
+
+/**
+ * Key/value system settings editable from the admin UI. Values are stored as
+ * text and parsed by the reader against a declared type, so an unexpected shape
+ * fails at the boundary rather than somewhere deeper.
+ * `isSecret` marks values that must never be returned to a client in plain
+ * text: the API redacts them, and the UI shows only whether they are set.
+ */
+model SystemSetting {
+  key       String   @id
+  value     String
+  type      String   @default("string")
+  isSecret  Boolean  @default(false)
+  label     String?
+  category  String   @default("general")
+  updatedAt DateTime @updatedAt
+  updatedBy String?  @db.Uuid
+
+  @@index([category])
+  @@map("system_settings")
 }

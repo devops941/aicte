@@ -1,14 +1,8 @@
-import { z } from "zod";
 import { jsonError, jsonOk, parseBody, withAuth } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { writeAudit } from "@/lib/audit/writer";
 import { holidaysList } from "@/lib/queries";
-
-const schema = z.object({
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use the format YYYY-MM-DD"),
-  label: z.string().min(2).max(120),
-  regionId: z.string().uuid().optional().nullable(),
-});
+import { holidayCreateSchema as schema } from "@/lib/admin-schemas";
 
 export const GET = withAuth("report:read", async () => jsonOk(await holidaysList()));
 

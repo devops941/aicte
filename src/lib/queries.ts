@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/db";
 import { applicationScope, institutionScope, type Actor } from "@/lib/auth/rbac";
+import { manageableUserScope } from "@/lib/auth/admin-guards";
 import { buildHolidaySet, classifySla, countWorkingDays, type HolidayLike } from "@/lib/sla/calendar";
 import type { Prisma } from "@prisma/client";
 
@@ -330,6 +331,107 @@ export async function regionOptions() {
   return prisma.region.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, code: true } });
 }
 
+/**
+ * Institution directory for the admin console. Scoped like every other read, so
+ * a regional officer only ever receives institutions in their own region.
+ */
+export async function institutionDirectory(
+  actor: Actor,
+  filters: { search?: string; regionId?: string; active?: boolean; page?: number; pageSize?: number } = {},
+) {
+  const scope = institutionScope(actor);
+  const page = Math.max(1, filters.page ?? 1);
+  const pageSize = Math.min(100, Math.max(5, filters.pageSize ?? 25));
+
+  const extra: Prisma.InstitutionWhereInput = {};
+  if (filters.search) {
+    extra.OR = [
+      { name: { contains: filters.search, mode: "insensitive" } },
+      { aicteId: { contains: filters.search, mode: "insensitive" } },
+      { city: { contains: filters.search, mode: "insensitive" } },
+    ];
+  }
+  if (filters.regionId) extra.regionId = filters.regionId;
+  if (filters.active !== undefined) extra.isActive = filters.active;
+
+  const where: Prisma.InstitutionWhereInput =
+    Object.keys(scope).length === 0 ? extra : { AND: [scope, extra] };
+
+  const [rows, total] = await Promise.all([
+    prisma.institution.findMany({
+      where,
+      orderBy: { name: "asc" },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      include: {
+        region: { select: { id: true, name: true, code: true } },
+        _count: { select: { applications: true, users: true, undertakings: true } },
+      },
+    }),
+    prisma.institution.count({ where }),
+  ]);
+
+  return { rows, total, page, pageSize, pages: Math.max(1, Math.ceil(total / pageSize)) };
+}
+
+/** Full detail for one institution: history, compliance and its people. */
+export async function institutionDetail(actor: Actor, id: string) {
+  const scope = institutionScope(actor);
+  const where: Prisma.InstitutionWhereInput =
+    Object.keys(scope).length === 0 ? { id } : { AND: [scope, { id }] };
+
+  return prisma.institution.findFirst({
+    where,
+    include: {
+      region: { select: { id: true, name: true, code: true } },
+      users: { select: { id: true, name: true, email: true, role: true, isActive: true, lastLoginAt: true } },
+      applications: {
+        orderBy: { createdAt: "desc" },
+        take: 50,
+        select: {
+          id: true,
+          appNo: true,
+          title: true,
+          type: true,
+          status: true,
+          slaState: true,
+          slaDueAt: true,
+          createdAt: true,
+          currentStage: { select: { name: true } },
+        },
+      },
+      undertakings: {
+        orderBy: { dueAt: "asc" },
+        select: { id: true, title: true, status: true, dueAt: true },
+      },
+    },
+  });
+}
+
+/** System-wide statistics for the admin dashboard tiles. */
+export async function platformStats() {
+  const [institutions, activeInstitutions, users, byRole, applications, notifications, failed] = await Promise.all([
+    prisma.institution.count(),
+    prisma.institution.count({ where: { isActive: true } }),
+    prisma.user.count(),
+    prisma.user.groupBy({ by: ["role"], _count: { _all: true } }),
+    prisma.application.count(),
+    prisma.notification.count(),
+    prisma.notification.count({ where: { status: "FAILED" } }),
+  ]);
+
+  return {
+    institutions,
+    activeInstitutions,
+    inactiveInstitutions: institutions - activeInstitutions,
+    users,
+    byRole: Object.fromEntries(byRole.map((r) => [r.role, r._count._all])) as Record<string, number>,
+    applications,
+    notifications,
+    failedNotifications: failed,
+  };
+}
+
 export async function workflowList() {
   return prisma.workflowDefinition.findMany({
     orderBy: [{ applicationType: "asc" }, { version: "desc" }],
@@ -341,16 +443,10 @@ export async function workflowList() {
 }
 
 export async function userList(actor: Actor) {
-  // Users are scoped by their own fields: an institution admin sees only their
-  // own institution's users, a regional officer only their region's.
-  const where: Prisma.UserWhereInput =
-    actor.role === "SYSTEM_ADMIN"
-      ? {}
-      : actor.role === "INSTITUTION_ADMIN" && actor.institutionId
-        ? { institutionId: actor.institutionId }
-        : actor.role === "REGIONAL_OFFICER" && actor.regionId
-          ? { regionId: actor.regionId }
-          : { id: actor.id };
+  // Scope comes from the shared helper so this read and the admin API agree on
+  // who may see whom. A Super Admin and System Admin see everyone; others are
+  // narrowed to their own region, institution, or just themselves.
+  const where = manageableUserScope(actor);
 
   return prisma.user.findMany({
     where,
@@ -361,10 +457,13 @@ export async function userList(actor: Actor) {
       email: true,
       role: true,
       designation: true,
+      phone: true,
       isActive: true,
       totpEnabled: true,
       lastLoginAt: true,
       lockedUntil: true,
+      regionId: true,
+      institutionId: true,
       region: { select: { name: true } },
       institution: { select: { name: true } },
     },

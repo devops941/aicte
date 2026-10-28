@@ -359,6 +359,8 @@ async function main() {
     { email: "evc.member2@aicte.gov.in", name: "Prof. Sanjay Verma", role: "EVC_MEMBER", region: "WEST", designation: "EVC Member" },
     { email: "authority@aicte.gov.in", name: "Dr. Nirmala Rao", role: "COMPETENT_AUTHORITY", designation: "Competent Authority" },
     { email: "auditor@aicte.gov.in", name: "K. Balasubramanian", role: "AUDITOR", designation: "Internal Auditor" },
+    { email: "superadmin@aicte.gov.in", name: "Platform Owner", role: "SUPER_ADMIN", designation: "Super Admin" },
+    { email: "sysadmin@aicte.gov.in", name: "Arun Prakash", role: "SYSTEM_ADMIN", designation: "System Administrator" },
   ];
 
   const userIds: Record<string, string> = {};

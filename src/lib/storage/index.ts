@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "crypto";
 import { promises as fs } from "fs";
 import path from "path";
+import { scanForMalware, verifyUpload } from "./signature";
 
 /**
  * Storage abstraction. The local driver writes outside the web root and files
@@ -69,6 +70,13 @@ class LocalStorageDriver implements StorageDriver {
 
   async put({ buffer, fileName, mimeType, ownerType, ownerId }: { buffer: Buffer; fileName: string; mimeType: string; ownerType: string; ownerId: string }): Promise<StoredFile> {
     assertUploadAllowed(mimeType, buffer.byteLength);
+    // The declared MIME type comes from the client and cannot be trusted; check
+    // the bytes before anything is written to disk.
+    const sniff = verifyUpload(buffer, mimeType);
+    if (!sniff.ok) throw new Error(sniff.reason);
+    const malware = scanForMalware(buffer);
+    if (malware) throw new Error(malware);
+
     const safeName = sanitiseFileName(fileName);
     const key = path.posix.join(ownerType.toLowerCase(), ownerId, `${randomUUID()}-${safeName}`);
     const target = this.resolveSafe(key);

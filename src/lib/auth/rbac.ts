@@ -39,7 +39,8 @@ export type Permission =
   | "report:read"
   | "audit:read"
   | "admin:users"
-  | "admin:config";
+  | "admin:config"
+  | "system:maintain";
 
 const MATRIX: Record<Role, Permission[]> = {
   INSTITUTION_ADMIN: [
@@ -93,6 +94,27 @@ const MATRIX: Record<Role, Permission[]> = {
     "assignment:manage",
     "admin:users",
     "admin:config",
+    "notification:read",
+    "report:read",
+    "audit:read",
+  ],
+  /**
+   * Super Admin is the platform-owner role: everything System Admin can do,
+   * plus maintenance operations (worker control, data diagnostics, failed-job
+   * retry). It is deliberately NOT granted `workflow:transition`,
+   * `decision:record` or `clarification:raise`. System administration is not
+   * approval authority — a Super Admin must not be able to approve, reject or
+   * recommend a case, because those are statutory acts reserved for the
+   * competent authority. This separation is enforced here, in the matrix, not
+   * by hiding buttons.
+   */
+  SUPER_ADMIN: [
+    "application:read",
+    "workflow:configure",
+    "assignment:manage",
+    "admin:users",
+    "admin:config",
+    "system:maintain",
     "notification:read",
     "report:read",
     "audit:read",
@@ -179,6 +201,7 @@ export function applicationScope(actor: Actor): Prisma.ApplicationWhereInput {
       };
     case "COMPETENT_AUTHORITY":
     case "SYSTEM_ADMIN":
+    case "SUPER_ADMIN":
     case "AUDITOR":
       return ALL;
     default:

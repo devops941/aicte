@@ -5,8 +5,16 @@ export const ROLE_LABELS: Record<string, string> = {
   EVC_MEMBER: "EVC Member",
   COMPETENT_AUTHORITY: "Competent Authority",
   SYSTEM_ADMIN: "System Admin",
+  SUPER_ADMIN: "Super Admin",
   AUDITOR: "Auditor",
 };
+
+/** Roles that administer the platform rather than work cases. */
+export const SYSTEM_ROLES = ["SYSTEM_ADMIN", "SUPER_ADMIN"] as const;
+
+export function isSystemRole(role: string): boolean {
+  return (SYSTEM_ROLES as readonly string[]).includes(role);
+}
 
 export const STATUS_LABELS: Record<string, string> = {
   DRAFT: "Draft",
@@ -122,12 +130,35 @@ export const NAV_BY_ROLE: Record<string, { href: string; label: string; icon: st
   ],
   SYSTEM_ADMIN: [
     { href: "/dashboard", label: "Dashboard", icon: "LayoutDashboard" },
-    { href: "/admin/workflows", label: "Workflows", icon: "GitBranch" },
-    { href: "/admin/users", label: "Users", icon: "Users" },
-    { href: "/admin/escalation", label: "Escalation", icon: "ArrowUpRight" },
-    { href: "/admin/holidays", label: "Holidays", icon: "CalendarDays" },
-    { href: "/reports", label: "Reports", icon: "BarChart3" },
-    { href: "/audit", label: "Audit Trail", icon: "History" },
+    { href: "/admin/institutions", label: "Institutions", icon: "Building2" },
+    { href: "/admin/users", label: "Users & Roles", icon: "Users" },
+    { href: "/cases", label: "Applications", icon: "FolderKanban" },
+    { href: "/admin/workflows", label: "Workflow Configuration", icon: "GitBranch" },
+    { href: "/admin/holidays", label: "SLA & Holidays", icon: "CalendarDays" },
+    { href: "/compliance", label: "Compliance & Documents", icon: "ShieldCheck" },
+    { href: "/evc", label: "EVC Scheduling", icon: "CalendarClock" },
+    { href: "/admin/escalation", label: "Alerts & Escalations", icon: "ArrowUpRight" },
+    { href: "/reports", label: "Reports & Analytics", icon: "BarChart3" },
+    { href: "/audit", label: "Audit & Security", icon: "History" },
+    { href: "/admin/settings", label: "System Settings", icon: "Settings" },
+    { href: "/admin/maintenance", label: "Data & Maintenance", icon: "Database" },
+    { href: "/profile", label: "Profile & Account Security", icon: "UserCog" },
+  ],
+  SUPER_ADMIN: [
+    { href: "/dashboard", label: "Dashboard", icon: "LayoutDashboard" },
+    { href: "/admin/institutions", label: "Institutions", icon: "Building2" },
+    { href: "/admin/users", label: "Users & Roles", icon: "Users" },
+    { href: "/cases", label: "Applications", icon: "FolderKanban" },
+    { href: "/admin/workflows", label: "Workflow Configuration", icon: "GitBranch" },
+    { href: "/admin/holidays", label: "SLA & Holidays", icon: "CalendarDays" },
+    { href: "/compliance", label: "Compliance & Documents", icon: "ShieldCheck" },
+    { href: "/evc", label: "EVC Scheduling", icon: "CalendarClock" },
+    { href: "/admin/escalation", label: "Alerts & Escalations", icon: "ArrowUpRight" },
+    { href: "/reports", label: "Reports & Analytics", icon: "BarChart3" },
+    { href: "/audit", label: "Audit & Security", icon: "History" },
+    { href: "/admin/settings", label: "System Settings", icon: "Settings" },
+    { href: "/admin/maintenance", label: "Data & Maintenance", icon: "Database" },
+    { href: "/profile", label: "Profile & Account Security", icon: "UserCog" },
   ],
   AUDITOR: [
     { href: "/dashboard", label: "Dashboard", icon: "LayoutDashboard" },

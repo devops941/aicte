@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 
 const DEMO_ACCOUNTS = [
+  { label: "Super Admin", email: "superadmin@aicte.gov.in", role: "Platform owner, no case decisions" },
   { label: "System Admin", email: "admin@gmail.com", role: "Configuration, users, SLA" },
   { label: "Institution", email: "institution@sri.edu.in", role: "Submit and respond" },
   { label: "Regional Officer", email: "ro.south@aicte.gov.in", role: "Scrutiny, Southern region" },

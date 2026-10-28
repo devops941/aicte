@@ -1,0 +1,40 @@
+<!-- BEGIN:nextjs-agent-rules -->
+
+## This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
+
+## Project notes (AICTE Approval Workflow Platform)
+
+Stack: Next.js 16 (App Router, Turbopack), TypeScript, Prisma 7, Neon Postgres.
+`DATABASE_URL` lives in `.env` (gitignored). No extra top-level folders — keep the
+tree tidy; admin pages live under `src/app/(portal)/admin/` and their APIs under
+`src/app/api/admin/`.
+
+### Commands
+- Dev server: `npx next dev -p 12000` (the preview proxy expects 12000, not 3000).
+  Set `DEV_ORIGINS` to the tunnel host so HMR/font assets are not blocked and the
+  client hydrates.
+- Typecheck: `npx tsc --noEmit`. Tests: `npx vitest run` (single-threaded by
+  design — the audit chain is global and append-only).
+- Build: `NODE_ENV=production npx next build`. Building with `NODE_ENV=development`
+  leaks into the build and makes prerendering `/_global-error` and `/` fail with
+  `Cannot read properties of null (reading 'useContext')`; that is an env artifact,
+  not a code bug.
+
+### Conventions
+- Request payload schemas live in `src/lib/admin-schemas.ts` and are strict
+  (`z.strictObject`), so an unknown or misspelt field is rejected rather than
+  silently dropped. Keep server-side validation there, not inline in routes.
+- Every state change is written through `writeAudit` inside the same transaction
+  as the change, so the audit row and the data commit or roll back together.
+  The chain is hash-linked; `seq` gaps are normal (rolled-back transactions do not
+  rewind a Postgres sequence) and do not indicate tampering. Verify with
+  `verifyAuditChain`.
+- Secrets are never echoed: `GET /api/admin/settings` returns `value: null` for a
+  secret and audit rows store `[redacted]`.
+- Users are deactivated, not deleted, to preserve the audit trail.

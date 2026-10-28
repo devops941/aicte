@@ -1,30 +1,8 @@
-import { z } from "zod";
 import { jsonOk, parseBody, withAuth } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { writeAudit } from "@/lib/audit/writer";
 import { escalationPolicies } from "@/lib/queries";
-
-const schema = z.object({
-  id: z.string().uuid().optional(),
-  level: z.coerce.number().int().min(1).max(10),
-  afterWorkingDays: z.coerce.number().int().min(0).max(365),
-  targetRole: z.enum([
-    "INSTITUTION_ADMIN",
-    "REGIONAL_OFFICER",
-    "BUREAU_OFFICER",
-    "EVC_MEMBER",
-    "COMPETENT_AUTHORITY",
-    "SYSTEM_ADMIN",
-    "AUDITOR",
-  ]),
-  channel: z.enum(["IN_APP", "EMAIL"]),
-  scope: z
-    .enum(["NEW_ENGINEERING", "EXTENSION_OF_APPROVAL", "INCREASE_IN_INTAKE", "NEW_COURSE", "CLOSURE", "OTHERS"])
-    .optional()
-    .nullable(),
-  isActive: z.boolean().optional(),
-  description: z.string().max(300).optional().nullable(),
-});
+import { escalationPolicySchema as schema } from "@/lib/admin-schemas";
 
 export const GET = withAuth("report:read", async () => jsonOk(await escalationPolicies()));
 

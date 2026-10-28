@@ -20,6 +20,10 @@ import {
   ChevronsLeft,
   ChevronsRight,
   X,
+  Building2,
+  Settings,
+  Database,
+  UserCog,
 } from "lucide-react";
 import { NAV_BY_ROLE } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -38,6 +42,10 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   ArrowUpRight,
   CalendarDays,
   Gavel,
+  Building2,
+  Settings,
+  Database,
+  UserCog,
 };
 
 export function Sidebar({
