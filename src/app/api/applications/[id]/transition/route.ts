@@ -19,7 +19,7 @@ const schema = z.object({
     "RESUBMIT",
   ]),
   remark: z.string().max(4000).optional().nullable(),
-  payload: z.record(z.unknown()).optional(),
+  payload: z.record(z.string(), z.unknown()).optional(),
 });
 
 /**
