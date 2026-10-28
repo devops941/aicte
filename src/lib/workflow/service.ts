@@ -45,8 +45,21 @@ async function loadHolidays(regionId: string | null): Promise<Set<string>> {
   return buildHolidaySet(holidays as HolidayLike[], regionId);
 }
 
+/**
+ * Advisory lock key for application-number allocation. The number is the next
+ * value after the current maximum, so two creations running at once would read
+ * the same maximum and try to insert the same number; the unique index turns
+ * that into a hard failure for one of them. Serialising just this read-and-write
+ * keeps the numbers gapless and the requests independent of luck.
+ */
+const APPLICATION_NO_LOCK = 1094863189;
+
 /** Generates the next sequential application number for the current year. */
 export async function nextApplicationNo(tx: Prisma.TransactionClient | typeof prisma = prisma): Promise<string> {
+  // Only meaningful inside a transaction, where the lock is held until commit.
+  if ("$executeRaw" in tx) {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(${APPLICATION_NO_LOCK}::bigint)`;
+  }
   const year = new Date().getFullYear();
   const prefix = `APP-${year}-`;
   const last = await tx.application.findFirst({

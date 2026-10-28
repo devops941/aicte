@@ -26,10 +26,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    return jsonError(
-      error instanceof Error ? error.message : "database unreachable",
-      503,
-      { database: "unreachable" },
-    );
+    console.error("[health] database check failed:", error);
+    return jsonError("Database unreachable", 503, { database: "unreachable" });
   }
 }

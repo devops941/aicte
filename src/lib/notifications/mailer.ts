@@ -1,5 +1,6 @@
 import nodemailer, { type Transporter } from "nodemailer";
 import { env } from "@/lib/env";
+import { escapeHtml } from "@/lib/notifications/html";
 
 /**
  * Mail delivery. In development the console transport is used so demos work
@@ -45,7 +46,7 @@ export async function sendMail(message: MailMessage): Promise<MailResult> {
       to: message.to,
       subject: message.subject,
       text: message.text,
-      html: message.html ?? `<p>${message.text.replace(/\n/g, "<br/>")}</p>`,
+      html: message.html ?? `<p>${escapeHtml(message.text).replace(/\n/g, "<br/>")}</p>`,
     });
     return { delivered: true, transport: "smtp" };
   } catch (error) {

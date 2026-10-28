@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PrismaClient } from "@prisma/client";
 import { writeAudit } from "@/lib/audit/writer";
+import { nextApplicationNo } from "@/lib/workflow/service";
 import { verifyChain, type ChainEntry } from "@/lib/audit/chain";
 
 /**
@@ -44,6 +45,51 @@ beforeAll(async () => {
 afterAll(async () => {
   await prisma.auditLog.deleteMany({ where: { entityId: { startsWith: PREFIX } } });
   await prisma.$disconnect();
+});
+
+describe("application number allocation", () => {
+  it("hands out unique, consecutive numbers under concurrent creation", async () => {
+    // Reserve a region and institution for the rows this test creates.
+    const region = await prisma.region.create({ data: { code: `${PREFIX}-NO-REG`, name: `${PREFIX} No Region` } });
+    const institution = await prisma.institution.create({
+      data: { aicteId: `${PREFIX}-NO-INST`, name: `${PREFIX} No Institute`, state: "Test State", regionId: region.id },
+    });
+
+    const writers = 15;
+    const created = await Promise.all(
+      Array.from({ length: writers }, () =>
+        prisma.$transaction(async (tx) => {
+          const appNo = await nextApplicationNo(tx);
+          return tx.application.create({
+            data: {
+              appNo,
+              type: "NEW_ENGINEERING",
+              title: `${PREFIX} concurrent creation`,
+              institutionId: institution.id,
+              regionId: region.id,
+            },
+          });
+        }),
+      ),
+    );
+
+    const numbers = created.map((a) => a.appNo);
+    expect(new Set(numbers).size).toBe(writers);
+
+    const year = new Date().getFullYear();
+    const prefix = `APP-${year}-`;
+    const sequences = numbers
+      .filter((n) => n.startsWith(prefix))
+      .map((n) => Number.parseInt(n.slice(prefix.length), 10))
+      .sort((a, b) => a - b);
+    for (let i = 1; i < sequences.length; i += 1) {
+      expect(sequences[i]).toBe(sequences[i - 1] + 1);
+    }
+
+    await prisma.application.deleteMany({ where: { appNo: { in: numbers } } });
+    await prisma.institution.delete({ where: { id: institution.id } });
+    await prisma.region.delete({ where: { id: region.id } });
+  });
 });
 
 describe("audit chain concurrency", () => {

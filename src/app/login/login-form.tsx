@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { AnimatePresence, motion } from "framer-motion";
+import { safeNextPath } from "@/lib/auth/redirect";
 import {
   AlertCircle,
   ArrowRight,
@@ -40,7 +41,7 @@ const FEATURES = [
 export function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const nextPath = params.get("next") ?? "/dashboard";
+  const nextPath = safeNextPath(params.get("next"));
 
   const [email, setEmail] = useState("admin@gmail.com");
   const [password, setPassword] = useState(DEMO_PASSWORD);
