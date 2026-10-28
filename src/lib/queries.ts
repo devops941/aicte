@@ -332,6 +332,40 @@ export async function regionOptions() {
 }
 
 /**
+ * Active EVC members a scheduler may assign. Schedulers hold `evc:schedule` but
+ * not `admin:users`, so they cannot read the user directory; this returns only
+ * the fields a member picker needs, and only for the committee role.
+ */
+export async function evcEligibleMembers() {
+  return prisma.user.findMany({
+    where: { role: "EVC_MEMBER", isActive: true },
+    orderBy: [{ regionId: "asc" }, { name: "asc" }],
+    select: { id: true, name: true, regionId: true, region: { select: { name: true } } },
+  });
+}
+
+/**
+ * Cases a scheduler can attach a visit to: those in the scheduler's scope that
+ * have reached the EVC stage and are not already closed. Read-only, so the
+ * picker cannot offer a case the server would then refuse.
+ */
+export async function evcSchedulableCases(actor: Actor) {
+  const scope = applicationScope(actor);
+  const scoped: Prisma.ApplicationWhereInput = Object.keys(scope).length === 0 ? {} : scope;
+  return prisma.application.findMany({
+    where: {
+      AND: [
+        scoped,
+        { status: { in: ["IN_PROCESS", "SCHEDULED_EVC", "RETURNED_FOR_CLARIFICATION"] } },
+        { currentStage: { is: { code: "EVC" } } },
+      ],
+    },
+    orderBy: { appNo: "asc" },
+    select: { id: true, appNo: true, title: true, institution: { select: { name: true } } },
+  });
+}
+
+/**
  * Institution directory for the admin console. Scoped like every other read, so
  * a regional officer only ever receives institutions in their own region.
  */

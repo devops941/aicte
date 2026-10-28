@@ -16,6 +16,9 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "./src"),
+      // `server-only` is a Next.js marker with no runtime module; stub it so
+      // server modules can be imported in tests.
+      "server-only": path.resolve(import.meta.dirname, "./tests/server-only.stub.ts"),
     },
   },
 });

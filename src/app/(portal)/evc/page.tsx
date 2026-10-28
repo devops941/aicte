@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { CalendarClock, MapPin, Users } from "lucide-react";
 import { requirePageActor } from "@/lib/auth/session";
-import { evcList } from "@/lib/queries";
+import { evcList, evcEligibleMembers, evcSchedulableCases } from "@/lib/queries";
+import { can } from "@/lib/auth/rbac";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardBody, CardHeader, EmptyState } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { formatDateTime, humanise } from "@/lib/utils";
+import { EvcSchedulePanel } from "./evc-schedule-panel";
 
 export const metadata: Metadata = { title: "EVC Visits" };
 
@@ -18,10 +20,27 @@ const TONE: Record<string, "info" | "ok" | "danger" | "warn"> = {
 
 export default async function EvcPage() {
   const actor = await requirePageActor();
+  const maySchedule = can(actor.role, "evc:schedule");
   const rows = await evcList(actor);
+  const [cases, members] = maySchedule
+    ? await Promise.all([evcSchedulableCases(actor), evcEligibleMembers()])
+    : [[], []];
 
   const upcoming = rows.filter((r) => r.scheduledFor >= new Date() && r.status !== "CANCELLED");
   const past = rows.filter((r) => r.scheduledFor < new Date() || r.status === "COMPLETED");
+
+  const editable = rows
+    .filter((r) => r.status === "PROPOSED" || r.status === "SCHEDULED")
+    .map((r) => ({
+      id: r.id,
+      applicationId: r.applicationId,
+      appNo: r.application.appNo,
+      scheduledFor: r.scheduledFor.toISOString(),
+      status: r.status,
+      venue: r.venue,
+      notes: r.notes,
+      memberIds: r.memberIds,
+    }));
 
   return (
     <div>
@@ -30,6 +49,16 @@ export default async function EvcPage() {
         title="EVC visits"
         description="Scheduled visits in your scope. Members are reminded 7 days and 1 day before the visit."
       />
+
+      {maySchedule && (
+        <div className="mb-5">
+          <EvcSchedulePanel
+            cases={cases.map((c) => ({ id: c.id, appNo: c.appNo, title: c.title, institution: c.institution }))}
+            members={members.map((m) => ({ id: m.id, name: m.name, region: m.region }))}
+            visits={editable}
+          />
+        </div>
+      )}
 
       <div className="grid gap-5 lg:grid-cols-2">
         <Card>

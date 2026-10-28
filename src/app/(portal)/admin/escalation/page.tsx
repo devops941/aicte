@@ -2,13 +2,14 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { ArrowUpRight } from "lucide-react";
 import { requirePageActor } from "@/lib/auth/session";
-import { escalationPolicies } from "@/lib/queries";
+import { escalationPolicies, regionOptions } from "@/lib/queries";
 import { can } from "@/lib/auth/rbac";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { ROLE_LABELS } from "@/lib/constants";
 import { humanise } from "@/lib/utils";
+import { EscalationEditor } from "./escalation-editor";
 
 export const metadata: Metadata = { title: "Escalation" };
 
@@ -16,7 +17,7 @@ export default async function EscalationPage() {
   const actor = await requirePageActor();
   if (!can(actor.role, "admin:config")) redirect("/dashboard");
 
-  const policies = await escalationPolicies();
+  const [policies, regions] = await Promise.all([escalationPolicies(), regionOptions()]);
 
   return (
     <div>
@@ -24,6 +25,21 @@ export default async function EscalationPage() {
         eyebrow="Configuration"
         title="Escalation policies"
         description="Each rung fires once the case is that many working days past its deadline. The most specific matching policy wins."
+      />
+
+      <EscalationEditor
+        policies={policies.map((p) => ({
+          id: p.id,
+          level: p.level,
+          afterWorkingDays: p.afterWorkingDays,
+          targetRole: p.targetRole,
+          channel: p.channel,
+          scope: p.scope,
+          regionId: p.regionId,
+          isActive: p.isActive,
+          description: p.description,
+        }))}
+        regions={regions.map((r) => ({ id: r.id, name: r.name }))}
       />
 
       <div className="grid gap-5 lg:grid-cols-3">

@@ -38,3 +38,10 @@ tree tidy; admin pages live under `src/app/(portal)/admin/` and their APIs under
 - Secrets are never echoed: `GET /api/admin/settings` returns `value: null` for a
   secret and audit rows store `[redacted]`.
 - Users are deactivated, not deleted, to preserve the audit trail.
+- Tests that create users must delete their audit rows before the users:
+  `AuditLog.actorId` is `onDelete: SetNull`, so deleting a user nulls `actorId`
+  on every audit row it authored, which changes their hashes and breaks the
+  append-only chain for every later entry (this cascades into
+  `concurrency.test.ts` and `integration.test.ts`, which verify the whole chain).
+  Clean up by `auditLog.deleteMany({ where: { actorEmail: { startsWith: PREFIX } } })`
+  first, then delete the users.

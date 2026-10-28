@@ -91,6 +91,7 @@ export const escalationPolicySchema = z.strictObject({
     .enum(["NEW_ENGINEERING", "EXTENSION_OF_APPROVAL", "INCREASE_IN_INTAKE", "NEW_COURSE", "CLOSURE", "OTHERS"])
     .optional()
     .nullable(),
+  regionId: z.string().uuid().optional().nullable(),
   isActive: z.boolean().optional(),
   description: z.string().max(300).optional().nullable(),
 });
