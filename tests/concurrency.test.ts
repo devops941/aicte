@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { PrismaClient } from "@prisma/client";
+import { createPrismaClient } from "@/lib/db";
 import { writeAudit } from "@/lib/audit/writer";
 import { nextApplicationNo } from "@/lib/workflow/service";
 import { verifyChain, type ChainEntry } from "@/lib/audit/chain";
@@ -13,7 +13,7 @@ import { verifyChain, type ChainEntry } from "@/lib/audit/chain";
  *
  * Rows created here are namespaced and removed in afterAll.
  */
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const PREFIX = `ATEST-${Date.now()}`;
 
 async function chainTailIsIntact() {

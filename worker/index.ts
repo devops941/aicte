@@ -6,6 +6,7 @@
  * dashboard can warn when the worker has stopped running — the failure mode
  * that would otherwise be silent.
  */
+import "dotenv/config";
 import cron from "node-cron";
 import { runAllScans } from "../src/lib/alerts/scanner";
 import { prisma } from "../src/lib/db";

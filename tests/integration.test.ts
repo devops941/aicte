@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { PrismaClient, type ApplicationType, type Role } from "@prisma/client";
+import { createPrismaClient } from "@/lib/db";
+import type { ApplicationType, Role } from "@prisma/client";
 import { guardTransition, statusAfterTransition, type StageRow, type TransitionRow } from "@/lib/workflow/engine";
 import { addWorkingDays, buildHolidaySet, countWorkingDays } from "@/lib/sla/calendar";
 import { writeAudit } from "@/lib/audit/writer";
@@ -14,7 +15,7 @@ import { buildHolidaySet as buildSet } from "@/lib/sla/calendar";
  * Everything it creates is namespaced and removed in afterAll, so it can run
  * against the development database without leaving residue.
  */
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const PREFIX = `ITEST-${Date.now()}`;
 
 let regionId = "";

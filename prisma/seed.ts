@@ -1,8 +1,10 @@
-import { PrismaClient, type ApplicationType, type Role } from "@prisma/client";
+import "dotenv/config";
+import { type ApplicationType, type Role } from "@prisma/client";
+import { createPrismaClient } from "../src/lib/db";
 import bcrypt from "bcryptjs";
 import { GENESIS_HASH, computeEntryHash } from "../src/lib/audit/chain";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 type StageDef = {
   code: string;
