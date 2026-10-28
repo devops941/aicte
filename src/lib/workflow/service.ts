@@ -465,6 +465,23 @@ export async function createApplication(input: {
       },
     });
 
+    // Record the initial stage immediately. Without this row the first stage
+    // would have no entry timestamp, so its dwell time and SLA outcome could
+    // never be measured when the case moves on.
+    if (initial) {
+      await tx.applicationStageHistory.create({
+        data: {
+          applicationId: created.id,
+          stageId: initial.id,
+          action: "CREATED",
+          actorId: actor.id,
+          actorRole: actor.role,
+          remark: "Application created as a draft",
+          enteredAt: created.createdAt,
+        },
+      });
+    }
+
     await writeAudit(
       {
         actorId: actor.id,

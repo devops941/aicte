@@ -1,6 +1,6 @@
 import { PrismaClient, type ApplicationType, type Role } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { createHash } from "crypto";
+import { GENESIS_HASH, computeEntryHash } from "../src/lib/audit/chain";
 
 const prisma = new PrismaClient();
 
@@ -512,20 +512,31 @@ async function main() {
     });
   }
 
-  // Seed the audit chain with a genesis entry
+  // Seed the audit chain with a genesis entry. It uses the same hashing helper
+  // as every later write, so the chain verifies from the very first row.
   const auditCount = await prisma.auditLog.count();
   if (auditCount === 0) {
     const createdAt = new Date();
-    const hash = createHash("sha256").update(`GENESIS|seed|${createdAt.toISOString()}`).digest("hex");
+    const payload = {
+      actorId: null,
+      actorEmail: "system@aicte.gov.in",
+      action: "SEED",
+      entityType: "System",
+      entityId: null,
+      before: null,
+      after: { note: "Initial platform seed" },
+      createdAt,
+    };
     await prisma.auditLog.create({
       data: {
-        actorEmail: "system@aicte.gov.in",
-        action: "SEED",
-        entityType: "System",
+        actorId: null,
+        actorEmail: payload.actorEmail,
+        action: payload.action,
+        entityType: payload.entityType,
         entityId: null,
-        after: { note: "Initial platform seed" },
-        prevHash: "0".repeat(64),
-        hash,
+        after: payload.after,
+        prevHash: GENESIS_HASH,
+        hash: computeEntryHash(payload, GENESIS_HASH),
         createdAt,
       },
     });

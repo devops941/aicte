@@ -1,6 +1,7 @@
 import type { WorkflowAction } from "@prisma/client";
 
 export const ACTION_LABEL_MAP: Record<WorkflowAction, string> = {
+  CREATED: "Created",
   SUBMIT: "Submitted",
   SCRUTINIZE: "Scrutinised",
   RETURN_FOR_CLARIFICATION: "Returned for clarification",

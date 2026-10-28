@@ -114,6 +114,7 @@ enum DocumentOwnerType {
 }
 
 enum WorkflowAction {
+  CREATED
   SUBMIT
   SCRUTINIZE
   RETURN_FOR_CLARIFICATION

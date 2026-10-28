@@ -327,3 +327,9 @@ export function getAiProvider(): AiProvider {
 }
 
 export type RoleHint = { role: Role; hint: string };
+
+export { DOCUMENT_SPECS, specFor } from "./spec";
+export type { DocumentSpec, SpecField } from "./spec";
+export { analyseDocument, summariseAnalyses } from "./analyse";
+export type { DocumentAnalysis, Finding, Severity } from "./analyse";
+export { extractText, extractFields, extractDocument } from "./extract";

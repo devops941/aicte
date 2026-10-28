@@ -39,6 +39,7 @@ export const SLA_LABELS: Record<string, string> = {
 };
 
 export const ACTION_LABELS: Record<string, string> = {
+  CREATED: "Created",
   SUBMIT: "Submit",
   SCRUTINIZE: "Scrutinise",
   RETURN_FOR_CLARIFICATION: "Return for Clarification",
