@@ -38,13 +38,13 @@ const FEATURES = [
   { icon: Sparkles, title: "Assistive, never decisive", body: "AI suggests and cites its sources. It never changes a stage or status." },
 ];
 
-export function LoginForm() {
+export function LoginForm({ showDemoAccounts = false }: { showDemoAccounts?: boolean }) {
   const router = useRouter();
   const params = useSearchParams();
   const nextPath = safeNextPath(params.get("next"));
 
-  const [email, setEmail] = useState("admin@gmail.com");
-  const [password, setPassword] = useState(DEMO_PASSWORD);
+  const [email, setEmail] = useState(showDemoAccounts ? "admin@gmail.com" : "");
+  const [password, setPassword] = useState(showDemoAccounts ? DEMO_PASSWORD : "");
   const [totp, setTotp] = useState("");
   const [showTotp, setShowTotp] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -265,6 +265,7 @@ export function LoginForm() {
             {showTotp ? "Hide authenticator field" : "I have an authenticator code"}
           </button>
 
+          {showDemoAccounts && (
           <div className="mt-6 rounded-2xl border border-line bg-surface p-4">
             <button
               type="button"
@@ -313,6 +314,7 @@ export function LoginForm() {
               )}
             </AnimatePresence>
           </div>
+          )}
         </motion.div>
       </div>
     </div>

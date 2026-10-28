@@ -44,15 +44,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const valid = await bcrypt.compare(password, user.passwordHash);
         if (!valid) {
-          const failed = user.failedLoginCount + 1;
-          await prisma.user.update({
+          // Increment atomically. Reading the count, adding one and writing it
+          // back would let simultaneous guesses read the same value and each
+          // write the same next value, so a burst of parallel attempts could
+          // stay under the threshold and never trigger the lockout.
+          const updated = await prisma.user.update({
             where: { id: user.id },
-            data: {
-              failedLoginCount: failed,
-              lockedUntil:
-                failed >= LOCK_THRESHOLD ? new Date(Date.now() + LOCK_MINUTES * 60_000) : null,
-            },
+            data: { failedLoginCount: { increment: 1 } },
+            select: { failedLoginCount: true },
           });
+          if (updated.failedLoginCount >= LOCK_THRESHOLD) {
+            await prisma.user.update({
+              where: { id: user.id },
+              data: { lockedUntil: new Date(Date.now() + LOCK_MINUTES * 60_000) },
+            });
+          }
           return null;
         }
 
