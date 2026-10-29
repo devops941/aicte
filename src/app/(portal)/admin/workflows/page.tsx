@@ -28,7 +28,7 @@ export default async function WorkflowsPage() {
 
       <div className="space-y-5">
         {definitions.map((def, i) => (
-          <Card key={def.id} className="animate-fade-up" >
+          <Card key={def.id}>
             <CardHeader
               title={
                 <span className="flex flex-wrap items-center gap-2">

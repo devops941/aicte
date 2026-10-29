@@ -100,20 +100,45 @@
     @apply inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium;
   }
 
+  /* Consistent filter/action strip: stacks on narrow screens, one aligned row
+     from sm upwards. Controls keep their own widths so nothing stretches. */
+  .toolbar {
+    @apply flex flex-col gap-2.5 border-b border-line px-5 py-3.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-6;
+  }
+
+  .toolbar-group {
+    @apply flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center;
+  }
+
   .skeleton {
     @apply rounded-lg bg-gradient-to-r from-line via-surface to-line bg-[length:500px_100%] animate-shimmer;
   }
 
+  /* No overflow here on purpose: the page's main region is the only scroll
+     container, so `thead th` sticks against it rather than against this box. */
   .table-wrap {
-    @apply overflow-x-auto rounded-2xl border border-line bg-surface;
+    @apply relative rounded-2xl border border-line bg-surface;
+  }
+
+  /* The header row stays visible while the table scrolls in the main region. */
+  .table-wrap thead th {
+    @apply sticky top-0 z-10 bg-canvas shadow-[inset_0_-1px_0_rgb(var(--line))];
   }
 
   .th {
     @apply whitespace-nowrap px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted;
   }
 
+  .th-right {
+    @apply text-right;
+  }
+
   .td {
-    @apply whitespace-nowrap border-t border-line px-4 py-3.5 text-sm;
+    @apply whitespace-nowrap border-t border-line px-4 py-3.5 text-sm align-middle;
+  }
+
+  .td-right {
+    @apply text-right;
   }
 }
 
