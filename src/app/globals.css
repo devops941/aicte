@@ -38,6 +38,15 @@
     border-color: rgb(var(--line));
   }
 
+  /* Grid and flex items default to `min-width: auto`, so a wide child — a table
+     with nowrap columns, or a <select> with long option labels — can stretch its
+     track past the viewport and break the layout. Letting items shrink keeps
+     that content inside its card, where the table's own overflow handles it. */
+  .grid > *,
+  .flex > * {
+    min-width: 0;
+  }
+
   html {
     scroll-behavior: smooth;
   }
@@ -114,13 +123,19 @@
     @apply rounded-lg bg-gradient-to-r from-line via-surface to-line bg-[length:500px_100%] animate-shimmer;
   }
 
-  /* No overflow here on purpose: the page's main region is the only scroll
-     container, so `thead th` sticks against it rather than against this box. */
+  /* The only scroll container for a table: it scrolls both axes so a wide table
+     cannot bleed out of its card and break the surrounding grid, and the column
+     header sticks to its top. The height cap keeps a long table from pushing the
+     toolbar out of view — only the rows scroll. */
   .table-wrap {
-    @apply relative rounded-2xl border border-line bg-surface;
+    @apply relative max-h-[min(65vh,42rem)] overflow-auto rounded-2xl border border-line bg-surface;
   }
 
-  /* The header row stays visible while the table scrolls in the main region. */
+  .table-wrap table {
+    @apply w-full border-collapse;
+  }
+
+  /* Opaque background is required, otherwise rows scroll visibly behind it. */
   .table-wrap thead th {
     @apply sticky top-0 z-10 bg-canvas shadow-[inset_0_-1px_0_rgb(var(--line))];
   }
