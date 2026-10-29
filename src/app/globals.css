@@ -148,8 +148,10 @@
     @apply text-right;
   }
 
+  /* Cells wrap rather than forcing the column wider, so a long stage name or
+     status badge cannot push the table past its card. */
   .td {
-    @apply whitespace-nowrap border-t border-line px-4 py-3.5 text-sm align-middle;
+    @apply border-t border-line px-4 py-3.5 text-sm align-middle;
   }
 
   .td-right {

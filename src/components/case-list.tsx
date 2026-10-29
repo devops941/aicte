@@ -228,13 +228,13 @@ export function CaseList({
             <table className="w-full text-left border-collapse">
               <thead className="bg-canvas border-b border-line">
                 <tr>
-                  <th className="th min-w-[220px] pl-5">Application</th>
-                  {showInstitution && <th className="th min-w-[170px]">Institution</th>}
-                  <th className="th min-w-[150px]">Stage</th>
-                  <th className="th min-w-[130px]">Status</th>
-                  <th className="th min-w-[120px]">Timeline</th>
-                  <th className="th min-w-[110px]">Deadline</th>
-                  <th className="th min-w-[130px] pr-6">Owner</th>
+                  <th className="th min-w-[190px] pl-5">Application</th>
+                  {showInstitution && <th className="th min-w-[150px]">Institution</th>}
+                  <th className="th min-w-[120px]">Stage</th>
+                  <th className="th min-w-[115px]">Status</th>
+                  <th className="th min-w-[105px]">Timeline</th>
+                  <th className="th min-w-[105px]">Deadline</th>
+                  <th className="th min-w-[110px] pr-6">Owner</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
@@ -256,7 +256,7 @@ export function CaseList({
                       onClick={() => router.push(`${basePath}/${row.id}`)}
                     >
                       <td className="td pl-5">
-                        <div className="max-w-[280px]">
+                        <div className="max-w-[260px]">
                           <span className="font-mono text-[11px] font-semibold text-brand">{row.appNo}</span>
                           <p className="mt-0.5 truncate font-medium text-ink" title={row.title}>{row.title}</p>
                           <p className="mt-0.5 text-[11px] text-muted">{TYPE_LABELS[row.type] ?? row.type}</p>
@@ -264,7 +264,7 @@ export function CaseList({
                       </td>
                       {showInstitution && (
                         <td className="td">
-                          <p className="max-w-[200px] truncate font-medium text-ink" title={row.institution.name}>{row.institution.name}</p>
+                          <p className="max-w-[170px] truncate font-medium text-ink" title={row.institution.name}>{row.institution.name}</p>
                           <p className="text-[11px] text-muted">{row.institution.state}</p>
                         </td>
                       )}

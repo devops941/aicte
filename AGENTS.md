@@ -41,7 +41,10 @@ tree tidy; admin pages live under `src/app/(portal)/admin/` and their APIs under
   sticky to the top of `.table-wrap`, so do not put a transform/animation on it
   or on an ancestor (a transformed ancestor becomes the containing block and
   silently breaks `position: sticky`). Right-aligned columns use
-  `.th-right`/`.td-right`.
+  `.th-right`/`.td-right`. Body cells (`.td`) wrap by default; keep header
+  labels on `.th` (nowrap) and bound any long cell text with `truncate` +
+  a `max-w-[...]` wrapper instead of `whitespace-nowrap`, otherwise the column
+  forces the table wider than its card.
 - Grid and flex items are given `min-width: 0` in `globals.css`. Without it the
   default `min-width: auto` lets a wide child (a nowrap table, or a `<select>`
   with long option labels) stretch its track past the viewport and break the
