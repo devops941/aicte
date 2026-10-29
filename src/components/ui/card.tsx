@@ -17,12 +17,12 @@ export function CardHeader({
   className?: string;
 }) {
   return (
-    <div className={cn("flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-line px-5 py-4 sm:px-6", className)}>
+    <div className={cn("flex flex-col gap-3 border-b border-line px-5 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-6", className)}>
       <div className="min-w-0">
         <h2 className="truncate text-sm font-semibold text-ink">{title}</h2>
         {subtitle && <p className="mt-0.5 text-xs text-muted">{subtitle}</p>}
       </div>
-      {action && <div className="flex shrink-0 flex-wrap items-center gap-2">{action}</div>}
+      {action && <div className="flex min-w-0 flex-wrap items-center gap-2 sm:shrink-0">{action}</div>}
     </div>
   );
 }

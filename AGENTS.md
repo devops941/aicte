@@ -34,11 +34,18 @@ tree tidy; admin pages live under `src/app/(portal)/admin/` and their APIs under
   `overflow-hidden`). `main` is the single scroll region, so the topbar and
   footer stay put and the content in the middle scrolls. Do not add
   `overflow-*` or `min-h-screen` to page-level wrappers.
-- Tables use `.table-wrap` + `.th`/`.td`. The table header is sticky and pins
-  against `main`. Never put a transform/animation (`animate-fade-up`,
-  `scale-in`) on a `.table-wrap` or any ancestor of one: a transformed ancestor
-  becomes the containing block and silently breaks `position: sticky`.
-  Right-aligned columns use `.th-right`/`.td-right`.
+- Tables use `.table-wrap` + `.th`/`.td`. `.table-wrap` is its own scroll
+  container on both axes and is height-capped, so a wide table cannot bleed out
+  of its card and a long one cannot push the toolbar out of view: the filter
+  bar and the column header stay put and only the rows scroll. The header is
+  sticky to the top of `.table-wrap`, so do not put a transform/animation on it
+  or on an ancestor (a transformed ancestor becomes the containing block and
+  silently breaks `position: sticky`). Right-aligned columns use
+  `.th-right`/`.td-right`.
+- Grid and flex items are given `min-width: 0` in `globals.css`. Without it the
+  default `min-width: auto` lets a wide child (a nowrap table, or a `<select>`
+  with long option labels) stretch its track past the viewport and break the
+  surrounding grid.
 - Filters and create actions share the `.toolbar` strip and the `CardHeader`
   `action` slot, so they align consistently across admin pages.
 - Every state change is written through `writeAudit` inside the same transaction

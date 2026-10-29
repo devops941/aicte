@@ -225,14 +225,14 @@ export function CaseList({
               a transformed ancestor becomes the containing block and would
               break the sticky table header. */}
           <div className="table-wrap hidden lg:block">
-            <table className="w-full min-w-[1020px] text-left border-collapse">
+            <table className="w-full text-left border-collapse">
               <thead className="bg-canvas border-b border-line">
                 <tr>
-                  <th className="th min-w-[260px] pl-5">Application</th>
-                  {showInstitution && <th className="th min-w-[190px]">Institution</th>}
-                  <th className="th min-w-[170px]">Stage</th>
+                  <th className="th min-w-[220px] pl-5">Application</th>
+                  {showInstitution && <th className="th min-w-[170px]">Institution</th>}
+                  <th className="th min-w-[150px]">Stage</th>
                   <th className="th min-w-[130px]">Status</th>
-                  <th className="th min-w-[110px]">Timeline</th>
+                  <th className="th min-w-[120px]">Timeline</th>
                   <th className="th min-w-[110px]">Deadline</th>
                   <th className="th min-w-[130px] pr-6">Owner</th>
                 </tr>

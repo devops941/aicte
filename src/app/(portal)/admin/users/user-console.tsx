@@ -70,7 +70,7 @@ export function UserConsole({
           subtitle="Row-level scope is applied in the query, not just in the interface."
           action={
             <>
-              <div className="relative">
+              <div className="relative w-full sm:w-56">
                 <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
                 <input
                   className="input pl-8"
@@ -80,7 +80,7 @@ export function UserConsole({
                   aria-label="Search users"
                 />
               </div>
-              <select className="input" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} aria-label="Filter by role">
+              <select className="input w-full sm:w-44" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} aria-label="Filter by role">
                 <option value="">All roles</option>
                 {Object.entries(ROLE_LABELS).map(([value, label]) => (
                   <option key={value} value={value}>
