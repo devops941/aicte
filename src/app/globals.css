@@ -47,6 +47,13 @@
     min-width: 0;
   }
 
+  /* Badges must not be squeezed below their content by the rule above, or the
+     label clips; min-content keeps the longest word intact while still letting
+     a multi-word badge wrap in a tight row. */
+  .chip {
+    min-width: min-content;
+  }
+
   html {
     scroll-behavior: smooth;
   }

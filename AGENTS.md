@@ -48,7 +48,12 @@ tree tidy; admin pages live under `src/app/(portal)/admin/` and their APIs under
 - Grid and flex items are given `min-width: 0` in `globals.css`. Without it the
   default `min-width: auto` lets a wide child (a nowrap table, or a `<select>`
   with long option labels) stretch its track past the viewport and break the
-  surrounding grid.
+  surrounding grid. That rule would also let a badge (`.chip`) shrink below its
+  own text and clip the label, so `.chip` is given `min-width: min-content`.
+- Filter/search controls in a `CardHeader` `action` slot must carry an explicit
+  width (`w-full sm:w-56`, `w-full sm:w-36`, ...). A bare `.input` is `w-full`,
+  and the action wrapper is `sm:shrink-0`, so an unbounded control keeps its
+  content width and overflows the card on narrow screens.
 - Filters and create actions share the `.toolbar` strip and the `CardHeader`
   `action` slot, so they align consistently across admin pages.
 - Every state change is written through `writeAudit` inside the same transaction
