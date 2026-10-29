@@ -40,7 +40,7 @@ export function Shell({
   };
 
   return (
-    <div className="flex min-h-screen bg-canvas">
+    <div className="flex h-screen overflow-hidden bg-canvas">
       <Sidebar
         role={user.role}
         collapsed={collapsed}
@@ -57,10 +57,11 @@ export function Shell({
           onToggleSidebar={handleToggle}
           onOpenMobile={() => setMobileOpen(true)}
         />
-        <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
+        {/* The only scroll region: the header above and the footer below stay put. */}
+        <main className="min-h-0 min-w-0 flex-1 overflow-auto px-4 py-6 sm:px-6 lg:px-8">
           <div className="mx-auto w-full max-w-7xl">{children}</div>
         </main>
-        <footer className="border-t border-line px-6 py-4 text-center text-[11px] text-muted">
+        <footer className="shrink-0 border-t border-line bg-surface px-6 py-3 text-center text-[11px] text-muted">
           AICTE Approval Workflow, SLA and Compliance Platform · Decision support only — all statutory decisions rest with the authorised official.
         </footer>
       </div>

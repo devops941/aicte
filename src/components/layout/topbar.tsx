@@ -60,7 +60,7 @@ export function Topbar({
   };
 
   return (
-    <header className="sticky top-0 z-30 border-b border-line bg-surface/85 backdrop-blur-md">
+    <header className="relative z-30 shrink-0 border-b border-line bg-surface/85 backdrop-blur-md">
       <div className="flex h-16 items-center gap-3 px-4 sm:px-6">
         {/* Mobile menu toggle */}
         <button

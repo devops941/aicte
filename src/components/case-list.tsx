@@ -103,9 +103,9 @@ export function CaseList({
 
   return (
     <div className="space-y-4">
-      <div className="card p-4 animate-fade-up">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-          <div className="relative flex-1">
+      <div className="card overflow-hidden animate-fade-up">
+        <div className="toolbar">
+          <div className="relative w-full sm:max-w-md sm:flex-1">
             <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
             <input
               value={search}
@@ -115,7 +115,7 @@ export function CaseList({
             />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="toolbar-group">
             <button
               type="button"
               onClick={() => setShowFilters((v) => !v)}
@@ -145,7 +145,7 @@ export function CaseList({
               exit={{ opacity: 0, height: 0 }}
               className="overflow-hidden"
             >
-              <div className="mt-4 space-y-3 border-t border-line pt-4">
+              <div className="space-y-3 border-b border-line px-5 py-4 sm:px-6">
                 <FilterRow label="Status" options={STATUS_OPTIONS} selected={status} onToggle={(v) => toggle(status, setStatus, v)} labels={STATUS_LABELS} />
                 <FilterRow label="Type" options={TYPE_OPTIONS} selected={type} onToggle={(v) => toggle(type, setType, v)} labels={TYPE_LABELS} />
                 <FilterRow label="Timeline" options={SLA_OPTIONS} selected={sla} onToggle={(v) => toggle(sla, setSla, v)} labels={SLA_LABELS} />
@@ -154,7 +154,7 @@ export function CaseList({
           )}
         </AnimatePresence>
 
-        <div className="mt-4 border-t border-line pt-4">
+        <div className="px-5 py-4 sm:px-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <div className="relative flex-1">
               <Sparkles className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-brand" />
@@ -221,8 +221,10 @@ export function CaseList({
         </div>
       ) : (
         <>
-          {/* Table on wide screens */}
-          <div className="table-wrap hidden lg:block animate-fade-up overflow-x-auto scrollbar-thin">
+          {/* Table on wide screens. No transform/animation on this wrapper:
+              a transformed ancestor becomes the containing block and would
+              break the sticky table header. */}
+          <div className="table-wrap hidden lg:block">
             <table className="w-full min-w-[1020px] text-left border-collapse">
               <thead className="bg-canvas border-b border-line">
                 <tr>

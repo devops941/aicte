@@ -62,26 +62,12 @@ export function InstitutionDirectory({
         />
       )}
 
-      {canEdit && !showForm && (
-        <button
-          type="button"
-          onClick={() => {
-            setEditing(null);
-            setShowForm(true);
-          }}
-          className="btn-primary"
-        >
-          <Building2 className="h-4 w-4" />
-          Register institution
-        </button>
-      )}
-
       <Card>
         <CardHeader
           title={`${filtered.length} institution(s)`}
           subtitle="Only institutions inside your scope are shown; scope is applied in the database query."
           action={
-            <div className="flex flex-wrap items-center gap-2">
+            <>
               <div className="relative">
                 <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
                 <input
@@ -105,7 +91,20 @@ export function InstitutionDirectory({
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
               </select>
-            </div>
+              {canEdit && !showForm && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditing(null);
+                    setShowForm(true);
+                  }}
+                  className="btn-primary shrink-0"
+                >
+                  <Building2 className="h-4 w-4" />
+                  Register institution
+                </button>
+              )}
+            </>
           }
         />
 
@@ -131,7 +130,7 @@ export function InstitutionDirectory({
                   <th className="th">Contact</th>
                   <th className="th">Records</th>
                   <th className="th">Status</th>
-                  {canEdit && <th className="th text-right">Actions</th>}
+                  {canEdit && <th className="th th-right">Actions</th>}
                 </tr>
               </thead>
               <tbody>

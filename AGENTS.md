@@ -30,6 +30,17 @@ tree tidy; admin pages live under `src/app/(portal)/admin/` and their APIs under
 - Request payload schemas live in `src/lib/admin-schemas.ts` and are strict
   (`z.strictObject`), so an unknown or misspelt field is rejected rather than
   silently dropped. Keep server-side validation there, not inline in routes.
+- Layout: the portal shell is a fixed-height flex column (`h-screen` +
+  `overflow-hidden`). `main` is the single scroll region, so the topbar and
+  footer stay put and the content in the middle scrolls. Do not add
+  `overflow-*` or `min-h-screen` to page-level wrappers.
+- Tables use `.table-wrap` + `.th`/`.td`. The table header is sticky and pins
+  against `main`. Never put a transform/animation (`animate-fade-up`,
+  `scale-in`) on a `.table-wrap` or any ancestor of one: a transformed ancestor
+  becomes the containing block and silently breaks `position: sticky`.
+  Right-aligned columns use `.th-right`/`.td-right`.
+- Filters and create actions share the `.toolbar` strip and the `CardHeader`
+  `action` slot, so they align consistently across admin pages.
 - Every state change is written through `writeAudit` inside the same transaction
   as the change, so the audit row and the data commit or roll back together.
   The chain is hash-linked; `seq` gaps are normal (rolled-back transactions do not

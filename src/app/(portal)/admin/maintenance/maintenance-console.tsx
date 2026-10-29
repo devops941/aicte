@@ -180,7 +180,7 @@ export function MaintenanceConsole({
         </CardBody>
       </Card>
 
-      <Card className="animate-fade-up">
+      <Card>
         <CardHeader title={`Failed notifications (${failed.length})`} subtitle="Requeue one to have the worker try again on its next tick." />
         {failed.length === 0 ? (
           <CardBody>
@@ -198,7 +198,7 @@ export function MaintenanceConsole({
                   <th className="th">Notification</th>
                   <th className="th">Attempts</th>
                   <th className="th">Last error</th>
-                  <th className="th text-right">Action</th>
+                  <th className="th th-right">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -220,7 +220,7 @@ export function MaintenanceConsole({
                         {f.lastError ?? "—"}
                       </p>
                     </td>
-                    <td className="td text-right">
+                    <td className="td td-right">
                       <button type="button" onClick={() => run("retry-notification", f.id)} disabled={busy === f.id} className="btn-ghost btn-sm">
                         {busy === f.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
                         Retry

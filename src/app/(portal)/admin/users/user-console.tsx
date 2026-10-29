@@ -64,26 +64,12 @@ export function UserConsole({
         />
       )}
 
-      {canEdit && !showForm && (
-        <button
-          type="button"
-          onClick={() => {
-            setEditing(null);
-            setShowForm(true);
-          }}
-          className="btn-primary"
-        >
-          <UserPlus className="h-4 w-4" />
-          Create account
-        </button>
-      )}
-
       <Card>
         <CardHeader
           title={`${filtered.length} account(s)`}
           subtitle="Row-level scope is applied in the query, not just in the interface."
           action={
-            <div className="flex flex-wrap items-center gap-2">
+            <>
               <div className="relative">
                 <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
                 <input
@@ -102,7 +88,20 @@ export function UserConsole({
                   </option>
                 ))}
               </select>
-            </div>
+              {canEdit && !showForm && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditing(null);
+                    setShowForm(true);
+                  }}
+                  className="btn-primary shrink-0"
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Create account
+                </button>
+              )}
+            </>
           }
         />
 
@@ -122,7 +121,7 @@ export function UserConsole({
                   <th className="th">Scope</th>
                   <th className="th">Security</th>
                   <th className="th">Last sign-in</th>
-                  {canEdit && <th className="th text-right">Actions</th>}
+                  {canEdit && <th className="th th-right">Actions</th>}
                 </tr>
               </thead>
               <tbody>
