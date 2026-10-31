@@ -22,7 +22,7 @@ export function CardHeader({
         <h2 className="truncate text-sm font-semibold text-ink">{title}</h2>
         {subtitle && <p className="mt-0.5 text-xs text-muted">{subtitle}</p>}
       </div>
-      {action && <div className="flex min-w-0 flex-wrap items-center gap-2 sm:shrink-0">{action}</div>}
+      {action && <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2 sm:shrink-0">{action}</div>}
     </div>
   );
 }

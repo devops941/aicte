@@ -68,7 +68,7 @@ export function InstitutionDirectory({
           subtitle="Only institutions inside your scope are shown; scope is applied in the database query."
           action={
             <>
-              <div className="relative">
+              <div className="relative w-full sm:w-56">
                 <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
                 <input
                   className="input pl-8"
@@ -78,7 +78,7 @@ export function InstitutionDirectory({
                   aria-label="Search institutions"
                 />
               </div>
-              <select className="input" value={regionFilter} onChange={(e) => setRegionFilter(e.target.value)} aria-label="Filter by region">
+              <select className="input w-full sm:w-36" value={regionFilter} onChange={(e) => setRegionFilter(e.target.value)} aria-label="Filter by region">
                 <option value="">All regions</option>
                 {regions.map((r) => (
                   <option key={r.id} value={r.id}>
@@ -86,7 +86,7 @@ export function InstitutionDirectory({
                   </option>
                 ))}
               </select>
-              <select className="input" value={activeFilter} onChange={(e) => setActiveFilter(e.target.value)} aria-label="Filter by status">
+              <select className="input w-full sm:w-36" value={activeFilter} onChange={(e) => setActiveFilter(e.target.value)} aria-label="Filter by status">
                 <option value="">Any status</option>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>

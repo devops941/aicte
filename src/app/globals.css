@@ -47,6 +47,13 @@
     min-width: 0;
   }
 
+  /* Badges must not be squeezed below their content by the rule above, or the
+     label clips; min-content keeps the longest word intact while still letting
+     a multi-word badge wrap in a tight row. */
+  .chip {
+    min-width: min-content;
+  }
+
   html {
     scroll-behavior: smooth;
   }
@@ -148,8 +155,10 @@
     @apply text-right;
   }
 
+  /* Cells wrap rather than forcing the column wider, so a long stage name or
+     status badge cannot push the table past its card. */
   .td {
-    @apply whitespace-nowrap border-t border-line px-4 py-3.5 text-sm align-middle;
+    @apply border-t border-line px-4 py-3.5 text-sm align-middle;
   }
 
   .td-right {
