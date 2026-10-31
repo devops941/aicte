@@ -10,13 +10,10 @@ export default async function LoginPage() {
   const session = await auth();
   if (session?.user) redirect("/dashboard");
 
-  // The demo panel lists seeded accounts and their shared password. That is
-  // useful for a demo and a disclosure in a real deployment, so it is shown
-  // only outside production unless explicitly re-enabled with
-  // SHOW_DEMO_ACCOUNTS=true.
-  const showDemo = process.env.SHOW_DEMO_ACCOUNTS
-    ? process.env.SHOW_DEMO_ACCOUNTS === "true"
-    : process.env.NODE_ENV !== "production";
+  // The demo panel lists seeded accounts and their shared password.
+  // Displayed by default in both development and production unless explicitly
+  // disabled with SHOW_DEMO_ACCOUNTS=false.
+  const showDemo = process.env.SHOW_DEMO_ACCOUNTS !== "false";
 
   return (
     <Suspense fallback={<div className="min-h-screen bg-canvas" />}>
