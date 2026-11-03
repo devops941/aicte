@@ -12,7 +12,9 @@ export const GET = withAuth("notification:read", async ({ actor, req }) => {
   const url = new URL(req.url);
   const limit = Math.min(200, Number(url.searchParams.get("limit") ?? 60));
   const rows = await notificationsFor(actor.id, limit);
-  const unread = await prisma.notification.count({ where: { userId: actor.id, readAt: null, status: "SENT" } });
+  const unread = await prisma.notification.count({
+    where: { userId: actor.id, readAt: null, status: { not: "FAILED" } },
+  });
   return jsonOk({ rows, unread });
 });
 

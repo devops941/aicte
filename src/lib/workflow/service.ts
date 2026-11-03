@@ -72,12 +72,25 @@ export async function nextApplicationNo(tx: Prisma.TransactionClient | typeof pr
   return `${prefix}${String(next).padStart(6, "0")}`;
 }
 
-/** Recipients for a role within a scope. Institution admins are pinned to their institution. */
+/** Recipients for a role within a scope. Institution team assignments take precedence. */
 export async function resolveRecipients(
   role: Role,
   scope: { regionId?: string | null; institutionId?: string | null },
   tx: Prisma.TransactionClient | typeof prisma = prisma,
 ) {
+  // First, check if specific officers are assigned to this institution with this role
+  if (scope.institutionId) {
+    const assigned = await tx.institutionAssignment.findMany({
+      where: { institutionId: scope.institutionId, role },
+      select: { user: { select: { id: true, email: true, name: true, isActive: true } } },
+    });
+    const activeAssigned = assigned.map((a) => a.user).filter((u) => u.isActive);
+    if (activeAssigned.length > 0) {
+      return activeAssigned;
+    }
+  }
+
+  // For institution admin, fall back to users directly belonging to the institution
   if (role === "INSTITUTION_ADMIN") {
     if (!scope.institutionId) return [];
     return tx.user.findMany({
@@ -85,6 +98,8 @@ export async function resolveRecipients(
       select: { id: true, email: true, name: true },
     });
   }
+
+  // For officers, fall back to all active officers in the region
   return tx.user.findMany({
     where: {
       role,
@@ -195,7 +210,7 @@ export async function performTransition(req: TransitionRequest): Promise<Transit
     // Close the outgoing stage-history row and measure how long it was held.
     if (application.currentStageId) {
       const openRow = await tx.applicationStageHistory.findFirst({
-        where: { applicationId, stageId: application.currentStageId, exitedAt: null },
+        where: { applicationId: application.id, stageId: application.currentStageId, exitedAt: null },
         orderBy: { enteredAt: "desc" },
       });
       if (openRow) {
@@ -327,7 +342,9 @@ export async function performTransition(req: TransitionRequest): Promise<Transit
 
     // Notifications: one row per recipient, keyed so a rerun cannot duplicate it.
     const items: OutboxItem[] = [];
-    const link = `/cases/${application.id}`;
+    const link = guard.to.assigneeRole === "INSTITUTION_ADMIN"
+      ? `/applications/${application.id}`
+      : `/cases/${application.id}`;
 
     for (const r of recipients) {
       items.push({
@@ -350,10 +367,10 @@ export async function performTransition(req: TransitionRequest): Promise<Transit
           userId: r.id,
           kind: "DECISION",
           dedupeKey: `decision:${action}:${application.id}:${r.id}`,
-          channel: "EMAIL",
+          channel: "IN_APP",
           title: `${application.appNo} has been ${newStatus.toLowerCase()}`,
           body: remark?.trim() || `Decision recorded by ${actor.name}.`,
-          link,
+          link: `/applications/${application.id}`,
           entityType: "Application",
           entityId: application.id,
         });
@@ -367,10 +384,31 @@ export async function performTransition(req: TransitionRequest): Promise<Transit
           userId: r.id,
           kind: "CLARIFICATION_RAISED",
           dedupeKey: `clarification:raised:${application.id}:${r.id}:${now.getTime()}`,
-          channel: "EMAIL",
+          channel: "IN_APP",
           title: `Clarification requested on ${application.appNo}`,
           body: remark?.trim() || "Please review and respond.",
           link: `/applications/${application.id}`,
+          entityType: "Application",
+          entityId: application.id,
+        });
+      }
+    }
+
+    if (action === "RESPOND_CLARIFICATION" || action === "RESUBMIT") {
+      const lastClarification = await tx.clarificationRequest.findFirst({
+        where: { applicationId: application.id },
+        orderBy: { createdAt: "desc" },
+        select: { raisedById: true },
+      });
+      if (lastClarification?.raisedById) {
+        items.push({
+          userId: lastClarification.raisedById,
+          kind: "CLARIFICATION_RESPONDED",
+          dedupeKey: `clarification:responded:${application.id}:${lastClarification.raisedById}:${now.getTime()}`,
+          channel: "IN_APP",
+          title: `Clarification response submitted for ${application.appNo}`,
+          body: remark?.trim() || "The applicant responded to the clarification request.",
+          link: `/cases/${application.id}`,
           entityType: "Application",
           entityId: application.id,
         });

@@ -1,4 +1,4 @@
-import type { NotificationChannel, NotificationKind } from "@prisma/client";
+import type { NotificationChannel, NotificationKind, NotificationStatus } from "@prisma/client";
 
 /**
  * Dedupe keys make the alert engine idempotent. A reminder is identified by the
@@ -58,6 +58,8 @@ export type OutboxItem = {
   kind: NotificationKind;
   dedupeKey: string;
   channel: NotificationChannel;
+  status?: NotificationStatus;
+  sentAt?: Date | null;
   title: string;
   body?: string;
   link?: string;
@@ -69,14 +71,23 @@ export type OutboxItem = {
  * Inserts outbox rows, skipping any whose dedupe key already exists. Uses
  * `createMany` with `skipDuplicates` so a concurrent worker cannot create a
  * second copy of the same alert.
+ * In-app notifications are delivered immediately to the portal database, so
+ * their initial status is defaulted to SENT.
  */
 export function dedupe(items: OutboxItem[]): OutboxItem[] {
   const seen = new Set<string>();
   const out: OutboxItem[] = [];
+  const now = new Date();
   for (const item of items) {
     if (seen.has(item.dedupeKey)) continue;
     seen.add(item.dedupeKey);
-    out.push(item);
+    const resolvedStatus: NotificationStatus =
+      item.status ?? (item.channel === "IN_APP" ? "SENT" : "QUEUED");
+    out.push({
+      ...item,
+      status: resolvedStatus,
+      sentAt: resolvedStatus === "SENT" ? (item.sentAt ?? now) : (item.sentAt ?? null),
+    });
   }
   return out;
 }
