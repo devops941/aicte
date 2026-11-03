@@ -1,5 +1,5 @@
 import type { ApplicationStatus, Prisma, Role, WorkflowAction } from "@prisma/client";
-import { prisma } from "@/lib/db";
+import { prisma, TX_OPTIONS } from "@/lib/db";
 import { writeAudit } from "@/lib/audit/writer";
 import {
   addWorkingDays,
@@ -37,8 +37,8 @@ export type TransitionOutcome = {
   warnings: string[];
 };
 
-async function loadHolidays(regionId: string | null): Promise<Set<string>> {
-  const holidays = await prisma.holiday.findMany({
+async function loadHolidays(regionId: string | null, client: Prisma.TransactionClient | typeof prisma = prisma): Promise<Set<string>> {
+  const holidays = await client.holiday.findMany({
     where: { OR: [{ regionId: null }, ...(regionId ? [{ regionId }] : [])] },
     select: { date: true, regionId: true },
   });
@@ -137,7 +137,14 @@ export async function performTransition(req: TransitionRequest): Promise<Transit
       throw new ForbiddenError("This application belongs to another institution");
     }
     if (actor.role === "REGIONAL_OFFICER" && application.regionId !== actor.regionId) {
-      throw new ForbiddenError("This application belongs to another region");
+      // Allow if the actor is directly assigned to this application's institution.
+      const isAssigned = await tx.institutionAssignment.findFirst({
+        where: { institutionId: application.institutionId, userId: actor.id },
+        select: { id: true },
+      });
+      if (!isAssigned) {
+        throw new ForbiddenError("This application belongs to another region");
+      }
     }
 
     if (!application.workflowVersion) {
@@ -183,7 +190,7 @@ export async function performTransition(req: TransitionRequest): Promise<Transit
     }
 
     const now = new Date();
-    const holidays = await loadHolidays(application.regionId);
+    const holidays = await loadHolidays(application.regionId, tx);
 
     // Close the outgoing stage-history row and measure how long it was held.
     if (application.currentStageId) {
@@ -413,7 +420,7 @@ export async function performTransition(req: TransitionRequest): Promise<Transit
       warnings,
       updatedStatus: updated.status,
     };
-  });
+  }, TX_OPTIONS);
 
   return {
     applicationId: result.applicationId,
@@ -444,6 +451,8 @@ export async function createApplication(input: {
     throw new ForbiddenError("You are not permitted to create applications");
   }
 
+  // An institution admin can only file for their own institution; the client
+  // cannot override it by sending a different institutionId in the body.
   const institutionId = actor.role === "INSTITUTION_ADMIN" ? actor.institutionId : input.institutionId;
   if (!institutionId) throw new ValidationError("An institution is required");
 
@@ -510,7 +519,7 @@ export async function createApplication(input: {
     );
 
     return created;
-  });
+  }, TX_OPTIONS);
 }
 
 /** Derives the live SLA classification for a case from its stored deadline. */

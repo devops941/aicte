@@ -20,7 +20,7 @@ export async function CaseDetailRoute({ id }: { id: string }) {
 
   const { build } = await holidaySetFor([application.regionId]);
   const slaDays = application.currentStage?.slaWorkingDays ?? 10;
-  const sla = liveSla(application.slaDueAt, application.slaPausedAt, slaDays, build(application.regionId));
+  const sla = liveSla(application.slaDueAt, application.slaPausedAt, slaDays, build(application.regionId), new Date(), application.status, application.slaState);
 
   const actions = availableActions({
     snapshot: { id: application.id, status: application.status, currentStageId: application.currentStageId },

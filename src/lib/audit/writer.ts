@@ -1,5 +1,5 @@
 import type { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/db";
+import { prisma, TX_OPTIONS } from "@/lib/db";
 import { computeEntryHash, GENESIS_HASH, verifyChain, type ChainEntry } from "./chain";
 
 type Tx = Prisma.TransactionClient;
@@ -79,7 +79,7 @@ async function appendEntry(input: AuditInput, tx: Tx) {
  */
 export async function writeAudit(input: AuditInput, tx?: Tx) {
   if (tx) return appendEntry(input, tx);
-  return prisma.$transaction((inner) => appendEntry(input, inner));
+  return prisma.$transaction((inner) => appendEntry(input, inner), TX_OPTIONS);
 }
 
 export async function loadChain(limit = 5000): Promise<ChainEntry[]> {

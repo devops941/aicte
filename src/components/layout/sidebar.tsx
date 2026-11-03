@@ -24,6 +24,7 @@ import {
   Settings,
   Database,
   UserCog,
+  Map,
 } from "lucide-react";
 import { NAV_BY_ROLE } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -46,6 +47,7 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   Settings,
   Database,
   UserCog,
+  Map,
 };
 
 export function Sidebar({

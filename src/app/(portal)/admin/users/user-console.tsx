@@ -31,7 +31,7 @@ export function UserConsole({
 }: {
   users: DirectoryUser[];
   regions: Option[];
-  institutions: Option[];
+  institutions: { id: string; name: string; aicteId: string }[];
   actorRole: string;
   canEdit: boolean;
 }) {

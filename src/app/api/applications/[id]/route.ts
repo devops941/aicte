@@ -17,6 +17,9 @@ export const GET = withAuth("application:read", async ({ actor }, params) => {
     application.slaPausedAt,
     application.currentStage?.slaWorkingDays ?? 10,
     build(application.regionId),
+    new Date(),
+    application.status,
+    application.slaState,
   );
 
   const actions = availableActions({

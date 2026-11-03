@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { requirePageActor } from "@/lib/auth/session";
-import { regionOptions, userList } from "@/lib/queries";
-import { prisma } from "@/lib/db";
+import { regionOptions, userList, institutionOptions } from "@/lib/queries";
 import { can } from "@/lib/auth/rbac";
 import { PageHeader } from "@/components/ui/page-header";
 import { UserConsole } from "./user-console";
@@ -18,7 +17,7 @@ export default async function UsersPage() {
   const [users, regions, institutions] = await Promise.all([
     userList(actor),
     regionOptions(),
-    prisma.institution.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    institutionOptions(),
   ]);
 
   return (

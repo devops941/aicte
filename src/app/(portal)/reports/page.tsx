@@ -8,7 +8,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Progress } from "@/components/ui/progress";
 import { RegionTrend, StageBars } from "@/components/charts";
 import { SLA_LABELS } from "@/lib/constants";
-import { humanise, percent } from "@/lib/utils";
+import { formatAge, humanise, percent } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Reports" };
 
@@ -166,7 +166,7 @@ export default async function ReportsPage() {
                 <div key={h.job} className="flex items-center justify-between py-0.5">
                   <span className="text-[11px] text-muted">{humanise(h.job)}</span>
                   <Badge tone={h.stale ? "danger" : "ok"} dot>
-                    {h.ageMinutes < 1 ? "now" : `${h.ageMinutes}m`}
+                    {formatAge(h.ageMinutes, false)}
                   </Badge>
                 </div>
               ))}

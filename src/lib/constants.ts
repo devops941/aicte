@@ -131,6 +131,7 @@ export const NAV_BY_ROLE: Record<string, { href: string; label: string; icon: st
   SYSTEM_ADMIN: [
     { href: "/dashboard", label: "Dashboard", icon: "LayoutDashboard" },
     { href: "/admin/institutions", label: "Institutions", icon: "Building2" },
+    { href: "/admin/regions", label: "Regions", icon: "Map" },
     { href: "/admin/users", label: "Users & Roles", icon: "Users" },
     { href: "/cases", label: "Applications", icon: "FolderKanban" },
     { href: "/admin/workflows", label: "Workflow Configuration", icon: "GitBranch" },
@@ -147,6 +148,7 @@ export const NAV_BY_ROLE: Record<string, { href: string; label: string; icon: st
   SUPER_ADMIN: [
     { href: "/dashboard", label: "Dashboard", icon: "LayoutDashboard" },
     { href: "/admin/institutions", label: "Institutions", icon: "Building2" },
+    { href: "/admin/regions", label: "Regions", icon: "Map" },
     { href: "/admin/users", label: "Users & Roles", icon: "Users" },
     { href: "/cases", label: "Applications", icon: "FolderKanban" },
     { href: "/admin/workflows", label: "Workflow Configuration", icon: "GitBranch" },

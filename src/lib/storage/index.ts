@@ -2,11 +2,12 @@ import { createHash, randomUUID } from "crypto";
 import { promises as fs } from "fs";
 import path from "path";
 import { scanForMalware, verifyUpload } from "./signature";
+import { ImageKitStorageDriver } from "./imagekit";
 
 /**
  * Storage abstraction. The local driver writes outside the web root and files
  * are only ever served through an authorised route handler, never statically.
- * An S3 or ImageKit driver can implement the same interface later.
+ * An S3 or ImageKit driver implements the same interface.
  */
 
 export type StoredFile = {
@@ -92,6 +93,8 @@ class LocalStorageDriver implements StorageDriver {
   }
 
   async get(key: string): Promise<Buffer> {
+    // Only local filesystem paths are supported; http(s) keys are rejected to
+    // prevent SSRF via a DB-stored URL triggering an arbitrary outbound fetch.
     return fs.readFile(this.resolveSafe(key));
   }
 
@@ -101,7 +104,10 @@ class LocalStorageDriver implements StorageDriver {
 }
 
 export function getStorage(): StorageDriver {
-  const driver = process.env.STORAGE_DRIVER ?? "local";
+  const driver = process.env.STORAGE_DRIVER ?? "imagekit";
+  if (driver === "imagekit") {
+    return new ImageKitStorageDriver();
+  }
   if (driver === "local") {
     return new LocalStorageDriver(process.env.STORAGE_LOCAL_DIR ?? "./var/uploads");
   }

@@ -3,15 +3,25 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertCircle, Loader2, Sparkles } from "lucide-react";
+import { AlertCircle, Building2, Loader2, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { TYPE_LABELS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import type { InstitutionOption } from "@/lib/queries";
 
 const TYPES = Object.keys(TYPE_LABELS);
 
-export function NewApplicationForm() {
+export function NewApplicationForm({
+  institutions = [],
+  defaultInstitutionId,
+}: {
+  institutions?: InstitutionOption[];
+  defaultInstitutionId?: string | null;
+}) {
   const router = useRouter();
+  // One college = one login: an institution admin files only for their own
+  // institution, so it is fixed to their account rather than chosen.
+  const [institutionId] = useState(defaultInstitutionId ?? "");
   const [type, setType] = useState("NEW_ENGINEERING");
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
@@ -21,6 +31,8 @@ export function NewApplicationForm() {
   const [error, setError] = useState<string | null>(null);
   const [suggestion, setSuggestion] = useState<{ value: string; confidence: number; factors: string[] } | null>(null);
   const [suggestBusy, setSuggestBusy] = useState(false);
+
+  const selectedInstitution = institutions.find((i) => i.id === institutionId);
 
   async function askSuggestion() {
     setSuggestBusy(true);
@@ -43,6 +55,10 @@ export function NewApplicationForm() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (institutions.length > 0 && !institutionId) {
+      setError("Please select an institution for this application.");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -55,6 +71,7 @@ export function NewApplicationForm() {
           summary: summary || null,
           intakeRequested: intakeRequested ? Number(intakeRequested) : null,
           courseName: courseName || null,
+          institutionId: institutionId || null,
         }),
       });
       const json = await res.json();
@@ -77,6 +94,28 @@ export function NewApplicationForm() {
           </p>
 
           <div className="mt-5 space-y-4">
+            {/* Institution — fixed to the admin's own college (one college = one login). */}
+            <div>
+              <label className="label">Institution</label>
+              {selectedInstitution ? (
+                <div className="flex items-center gap-2.5 rounded-xl border border-line bg-canvas px-3.5 py-2.5">
+                  <Building2 className="h-4 w-4 shrink-0 text-muted" />
+                  <span className="min-w-0 text-xs">
+                    <span className="block truncate font-semibold text-ink">{selectedInstitution.name}</span>
+                    <span className="block truncate text-[11px] text-muted">
+                      AICTE ID: <span className="font-mono text-brand">{selectedInstitution.aicteId}</span>
+                      {[selectedInstitution.city, selectedInstitution.state].filter(Boolean).length > 0 &&
+                        ` · ${[selectedInstitution.city, selectedInstitution.state].filter(Boolean).join(", ")}`}
+                    </span>
+                  </span>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-warn/30 bg-warn/5 px-3.5 py-2.5 text-xs text-warn">
+                  No institution is linked to your account. Ask an administrator to assign one before applying.
+                </div>
+              )}
+            </div>
+
             <div>
               <label className="label">Application type</label>
               <div className="grid gap-2 sm:grid-cols-2">
@@ -171,7 +210,11 @@ export function NewApplicationForm() {
         </AnimatePresence>
 
         <div className="flex gap-2">
-          <button type="submit" disabled={busy || title.trim().length < 5} className="btn-primary">
+          <button
+            type="submit"
+            disabled={busy || title.trim().length < 5 || (institutions.length > 0 && !institutionId)}
+            className="btn-primary"
+          >
             {busy && <Loader2 className="h-4 w-4 animate-spin" />}
             Create draft
           </button>

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { jsonError, jsonOk, parseBody, withAuth } from "@/lib/api";
-import { prisma } from "@/lib/db";
+import { prisma, TX_OPTIONS } from "@/lib/db";
 import { writeAudit } from "@/lib/audit/writer";
 import { dedupe } from "@/lib/notifications/outbox";
 
@@ -13,9 +13,15 @@ const schema = z.object({
 export const POST = withAuth("compliance:verify", async ({ actor, req, ip, userAgent }, params) => {
   const submission = await prisma.complianceSubmission.findUnique({
     where: { id: params.id },
-    include: { undertaking: { include: { institution: { select: { id: true } } } } },
+    include: { undertaking: { include: { institution: { select: { id: true, regionId: true } } } } },
   });
   if (!submission) return jsonError("Submission not found", 404);
+  if (submission.status !== "PENDING") return jsonError("This submission has already been verified", 409);
+
+  // Regional officer can only verify compliance within their assigned region
+  if (actor.role === "REGIONAL_OFFICER" && actor.regionId && submission.undertaking.institution.regionId !== actor.regionId) {
+    return jsonError("This institution belongs to another region", 403);
+  }
 
   const body = parseBody(schema, await req.json());
 
@@ -75,7 +81,7 @@ export const POST = withAuth("compliance:verify", async ({ actor, req, ip, userA
     );
 
     return updated;
-  });
+  }, TX_OPTIONS);
 
   return jsonOk(result);
 });

@@ -173,6 +173,7 @@ model User {
   notifications         Notification[]
   auditLogs             AuditLog[]
   submissions           ComplianceSubmission[]    @relation("SubmissionVerifier")
+  institutionAssignments InstitutionAssignment[]
 
   @@index([role])
   @@index([regionId])
@@ -190,6 +191,13 @@ model Institution {
   regionId     String   @db.Uuid
   contactEmail String?
   contactPhone String?
+  address      String?
+  pincode      String?
+  ownerName    String?
+  ownerEmail   String?
+  ownerPhone   String?
+  ownerAddress String?
+  ownerPincode String?
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -198,10 +206,34 @@ model Institution {
   users        User[]
   applications Application[]
   undertakings Undertaking[]
+  staff        InstitutionAssignment[]
 
   @@index([regionId])
   @@index([state])
   @@map("institutions")
+}
+
+/**
+ * Staff assigned to an institution's review team. A single institution can have
+ * many assigned officers (one Institution Admin, Bureau Officer, EVC Member,
+ * Auditor, etc.), and this table drives who is notified about that institution's
+ * cases in addition to the region-based scope.
+ */
+model InstitutionAssignment {
+  id            String   @id @default(uuid()) @db.Uuid
+  institutionId String   @db.Uuid
+  userId        String   @db.Uuid
+  role          Role
+  assignedById  String?  @db.Uuid
+  createdAt     DateTime @default(now())
+
+  institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([institutionId, userId, role])
+  @@index([institutionId])
+  @@index([userId])
+  @@map("institution_assignments")
 }
 
 model Application {
@@ -444,6 +476,10 @@ model Document {
   expiresAt     DateTime?
   extractedJson Json?
   uploadedById  String?           @db.Uuid
+  verificationStatus String?       @default("PENDING")
+  verificationRemark String?
+  verifiedAt         DateTime?
+  verifiedById       String?           @db.Uuid
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 

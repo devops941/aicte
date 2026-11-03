@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Activity, Loader2, RefreshCw, RotateCcw, ShieldCheck } from "lucide-react";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatDateTime } from "@/lib/utils";
+import { formatAge, formatDateTime } from "@/lib/utils";
 
 export type JobHealth = {
   job: string;
@@ -115,7 +115,7 @@ export function MaintenanceConsole({
                     <Badge tone={j.stale ? "warn" : "ok"} dot>
                       {j.stale ? "Stale" : "Fresh"}
                     </Badge>
-                    <span className="text-[10px] text-muted">{j.ageMinutes}m ago</span>
+                    <span className="text-[10px] text-muted">{formatAge(j.ageMinutes)}</span>
                   </div>
                 </div>
               ))

@@ -8,6 +8,7 @@ import {
   ArrowRight,
   CheckCircle2,
   Clock,
+  ExternalLink,
   FileText,
   Loader2,
   MessageSquareWarning,
@@ -104,6 +105,8 @@ export function CaseDetail({
   const [summary, setSummary] = useState<{ text: string; citations: string[] } | null>(null);
   const [summaryBusy, setSummaryBusy] = useState(false);
   const [uploadBusy, setUploadBusy] = useState(false);
+  const [uploadKind, setUploadKind] = useState<string>("");
+  const [uploadExpiry, setUploadExpiry] = useState<string>("");
   const [risk, setRisk] = useState<{ value: string; factors: string[] } | null>(null);
   const [riskBusy, setRiskBusy] = useState(false);
 
@@ -174,17 +177,21 @@ export function CaseDetail({
   async function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const kind = (e.target.dataset.kind as string) || "SUPPORTING_DOC";
+    const kind = uploadKind || (e.target.dataset.kind as string) || missing[0]?.kind || "SUPPORTING_DOC";
     setUploadBusy(true);
     setError(null);
     try {
       const form = new FormData();
       form.append("file", file);
       form.append("kind", kind);
+      if (uploadExpiry) {
+        form.append("expiresAt", uploadExpiry);
+      }
       const res = await fetch(`/api/applications/${application.id}/documents`, { method: "POST", body: form });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Upload rejected");
-      setNotice(`${json.data.document.fileName} uploaded. Pre-check is advisory only.`);
+      setNotice(`${json.data.document.fileName} uploaded as ${json.data.document.label || kind}. Pre-check is advisory only.`);
+      setUploadExpiry("");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload rejected");
@@ -461,7 +468,7 @@ export function CaseDetail({
                 <div className="space-y-2">
                   {documents.map((d) => (
                     <div key={d.id} className="rounded-xl border border-line px-3.5 py-2.5">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center justify-between gap-3">
                         <FileText className="h-4 w-4 shrink-0 text-brand" />
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-xs font-medium text-ink">{d.label ?? d.kind}</p>
@@ -470,6 +477,16 @@ export function CaseDetail({
                             {d.expiresAt && ` · expires ${formatDate(d.expiresAt)}`}
                           </p>
                         </div>
+                        <a
+                          href={`/api/applications/${application.id}/documents/${d.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn-ghost btn-sm inline-flex items-center gap-1.5 shrink-0 text-[11px] py-1 px-2.5"
+                          title="Open document in new tab"
+                        >
+                          <ExternalLink className="h-3 w-3 text-brand" />
+                          View
+                        </a>
                       </div>
                       <DocumentAnalyzer applicationId={application.id} documentId={d.id} kind={d.kind} />
                     </div>
@@ -478,18 +495,61 @@ export function CaseDetail({
               )}
 
               {canUpload && (
-                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-line px-4 py-3 text-xs font-medium text-muted transition-colors hover:border-brand/40 hover:bg-brand-soft/40 hover:text-brand-ink">
-                  {uploadBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                  {uploadBusy ? "Uploading" : "Upload a document"}
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept=".pdf,.png,.jpg,.jpeg,.webp,.csv,.docx,.xlsx"
-                    onChange={onUpload}
-                    data-kind={missing[0]?.kind ?? "SUPPORTING_DOC"}
-                    disabled={uploadBusy}
-                  />
-                </label>
+                <div className="rounded-xl border border-dashed border-line p-3.5 space-y-3 bg-canvas/40">
+                  <p className="text-xs font-semibold text-ink">Upload a document</p>
+                  <div className="grid gap-2.5 sm:grid-cols-2">
+                    <div>
+                      <label className="label text-[10px]" htmlFor="doc-upload-kind">Document Type</label>
+                      <select
+                        id="doc-upload-kind"
+                        value={uploadKind || missing[0]?.kind || "SUPPORTING_DOC"}
+                        onChange={(e) => setUploadKind(e.target.value)}
+                        className="input text-xs py-1.5"
+                      >
+                        {missing.length > 0 && (
+                          <optgroup label="Missing Checklist Items">
+                            {missing.map((m) => (
+                              <option key={`missing-${m.kind}`} value={m.kind}>
+                                {m.label} (Required)
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                        <optgroup label="All Document Types">
+                          {checklist.map((c) => (
+                            <option key={`all-${c.kind}`} value={c.kind}>
+                              {c.label}
+                            </option>
+                          ))}
+                          <option value="SUPPORTING_DOC">Supporting Document</option>
+                        </optgroup>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="label text-[10px]" htmlFor="doc-upload-expiry">Expiry Date (if applicable)</label>
+                      <input
+                        id="doc-upload-expiry"
+                        type="date"
+                        value={uploadExpiry}
+                        onChange={(e) => setUploadExpiry(e.target.value)}
+                        className="input text-xs py-1.5"
+                      />
+                    </div>
+                  </div>
+
+                  <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-line bg-surface hover:bg-brand-soft/40 px-4 py-2 text-xs font-medium text-brand-ink transition-colors">
+                    {uploadBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                    {uploadBusy ? "Uploading..." : "Select and Upload File"}
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept=".pdf,.png,.jpg,.jpeg,.webp,.csv,.docx,.xlsx"
+                      onChange={onUpload}
+                      disabled={uploadBusy}
+                    />
+                  </label>
+                </div>
               )}
             </CardBody>
           </Card>

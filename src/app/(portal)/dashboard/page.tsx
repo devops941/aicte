@@ -27,7 +27,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { FadeIn, Stagger, StaggerItem } from "@/components/ui/motion";
 import { RegionTrend, SlaDonut, StageBars, StatusBars, WorkloadBars } from "@/components/charts";
 import { SLA_LABELS, STATUS_LABELS } from "@/lib/constants";
-import { formatDate, humanise } from "@/lib/utils";
+import { formatAge, formatDate, humanise } from "@/lib/utils";
 import { delayRisk } from "@/lib/ai";
 
 export const metadata: Metadata = { title: "Dashboard" };
@@ -83,7 +83,7 @@ export default async function DashboardPage() {
             <div className="text-xs">
               <p className="font-semibold text-ink">The scheduled worker has not run recently</p>
               <p className="mt-0.5 text-muted">
-                {staleJobs.map((j) => `${j.job} (${j.ageMinutes}m ago)`).join(", ")}. Deadlines are not being
+                {staleJobs.map((j) => `${j.job} (${formatAge(j.ageMinutes)})`).join(", ")}. Deadlines are not being
                 checked, so reminders and escalations will not fire.
               </p>
             </div>
@@ -312,7 +312,7 @@ export default async function DashboardPage() {
                     </Badge>
                   </div>
                   <p className="mt-1.5 text-[11px] text-muted">
-                    Last run {job.ageMinutes < 1 ? "just now" : `${job.ageMinutes}m ago`} · {job.runCount} runs
+                    Last run {formatAge(job.ageMinutes)} · {job.runCount} runs
                   </p>
                 </div>
               ))}

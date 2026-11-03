@@ -51,7 +51,8 @@ export const userPasswordSchema = z.strictObject({
 });
 
 export const institutionCreateSchema = z.strictObject({
-  aicteId: z.string().min(3).max(40),
+  /** Omitted or empty means "auto-generate one" in standard AICTE format 1-XXXXXXXXXX */
+  aicteId: z.string().min(3).max(40).optional(),
   name: z.string().min(3).max(200),
   state: z.string().min(2).max(80),
   district: z.string().max(80).optional().nullable(),
@@ -59,6 +60,13 @@ export const institutionCreateSchema = z.strictObject({
   regionId: z.string().uuid(),
   contactEmail: z.string().email().max(160).optional().nullable(),
   contactPhone: z.string().max(30).optional().nullable(),
+  address: z.string().max(300).optional().nullable(),
+  pincode: z.string().max(12).optional().nullable(),
+  ownerName: z.string().max(160).optional().nullable(),
+  ownerEmail: z.string().email().max(160).optional().nullable(),
+  ownerPhone: z.string().max(30).optional().nullable(),
+  ownerAddress: z.string().max(300).optional().nullable(),
+  ownerPincode: z.string().max(12).optional().nullable(),
 });
 
 export const institutionUpdateSchema = institutionCreateSchema.partial().extend({
@@ -71,6 +79,11 @@ export const holidayCreateSchema = z.strictObject({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use the format YYYY-MM-DD"),
   label: z.string().min(2).max(120),
   regionId: z.string().uuid().optional().nullable(),
+});
+
+export const regionCreateSchema = z.strictObject({
+  code: z.string().min(2).max(20).regex(/^[A-Za-z0-9_-]+$/, "Use letters, numbers, hyphen or underscore only"),
+  name: z.string().min(2).max(120),
 });
 
 export const escalationPolicySchema = z.strictObject({
@@ -94,6 +107,11 @@ export const escalationPolicySchema = z.strictObject({
   regionId: z.string().uuid().optional().nullable(),
   isActive: z.boolean().optional(),
   description: z.string().max(300).optional().nullable(),
+});
+
+export const institutionAssignmentSchema = z.strictObject({
+  userId: z.string().uuid(),
+  role: z.enum(["REGIONAL_OFFICER", "BUREAU_OFFICER", "EVC_MEMBER", "AUDITOR"]),
 });
 
 export const maintenanceActionSchema = z.discriminatedUnion("action", [

@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Pencil, Plus, X } from "lucide-react";
+import { Loader2, Pencil, Plus, RefreshCw, X } from "lucide-react";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { generateAicteId } from "@/lib/utils";
 
 export type InstitutionRow = {
   id: string;
@@ -57,7 +58,7 @@ export function InstitutionForm({
           contactEmail: editing.contactEmail ?? "",
           contactPhone: editing.contactPhone ?? "",
         }
-      : { ...EMPTY, regionId: regions[0]?.id ?? "" },
+      : { ...EMPTY, aicteId: generateAicteId(), regionId: regions[0]?.id ?? "" },
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -99,7 +100,7 @@ export function InstitutionForm({
     <Card className="animate-fade-up">
       <CardHeader
         title={editing ? `Edit ${editing.name}` : "Register an institution"}
-        subtitle="The AICTE id is unique; the region decides which officer sees its cases."
+        subtitle="The AICTE ID is auto-generated and permanent; the region decides which officer sees its cases."
         action={
           editing ? (
             <button type="button" onClick={onDone} className="btn-ghost btn-sm" aria-label="Cancel editing">
@@ -112,10 +113,43 @@ export function InstitutionForm({
       <CardBody>
         <form onSubmit={onSubmit} className="grid gap-3.5 sm:grid-cols-2">
           <div>
-            <label htmlFor="i-aicteId" className="label">
-              AICTE id
-            </label>
-            <input id="i-aicteId" required minLength={3} maxLength={40} className="input" value={form.aicteId} onChange={(e) => set("aicteId", e.target.value)} />
+            <div className="flex items-center justify-between mb-1.5">
+              <label htmlFor="i-aicteId" className="label mb-0">
+                AICTE ID
+              </label>
+              <span className="text-[10px] text-muted font-normal bg-canvas px-1.5 py-0.5 rounded border border-line">
+                Auto-generated · Read-only
+              </span>
+            </div>
+            <div className="relative flex items-center">
+              <input
+                id="i-aicteId"
+                required
+                readOnly
+                tabIndex={-1}
+                minLength={3}
+                maxLength={40}
+                className="input bg-canvas/70 text-muted cursor-not-allowed select-all font-mono font-medium focus:ring-0 focus:border-line pr-24"
+                value={form.aicteId}
+                title="AICTE ID is auto-generated and cannot be edited"
+              />
+              {!editing && (
+                <button
+                  type="button"
+                  onClick={() => set("aicteId", generateAicteId())}
+                  className="btn-ghost btn-sm absolute right-1.5 text-xs text-muted hover:text-ink gap-1 px-2 py-1"
+                  title="Generate another AICTE ID"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Regenerate
+                </button>
+              )}
+            </div>
+            <p className="mt-1 text-[11px] text-muted">
+              {editing
+                ? "Permanent AICTE Institute ID cannot be changed."
+                : "Auto-generated permanent AICTE Institute ID (uneditable)."}
+            </p>
           </div>
           <div>
             <label htmlFor="i-name" className="label">

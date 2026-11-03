@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { writeAudit } from "@/lib/audit/writer";
 import { caseDetail } from "@/lib/queries";
 import { getStorage } from "@/lib/storage";
-import { preCheckDocument } from "@/lib/ai";
+import { preCheckDocument, specFor } from "@/lib/ai";
 import { CHECKLIST_BY_TYPE } from "@/lib/constants";
 
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -58,12 +58,13 @@ export const POST = withAuth("application:update", async ({ actor, req, ip, user
     return jsonError(error instanceof Error ? error.message : "Upload rejected", 422);
   }
 
+  const spec = specFor(kind);
   const check = preCheckDocument({
     fileName: stored.fileName,
     mimeType: stored.mimeType,
     extracted: null,
     expectedKind: kind,
-    requiredFields: [],
+    requiredFields: spec ? spec.requiredFields.map((f) => f.key) : [],
   });
 
   const document = await prisma.$transaction(async (tx) => {
