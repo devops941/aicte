@@ -1,10 +1,10 @@
 import { jsonError, jsonOk, parseBody, withAuth } from "@/lib/api";
-import { prisma } from "@/lib/db";
+import { prisma, TX_OPTIONS } from "@/lib/db";
 import { writeAudit } from "@/lib/audit/writer";
 import { caseDetail } from "@/lib/queries";
 import { dedupe } from "@/lib/notifications/outbox";
 import { evcReminderKey } from "@/lib/notifications/outbox";
-import { ValidationError } from "@/lib/auth/rbac";
+import { ValidationError, assertCan } from "@/lib/auth/rbac";
 import { evcCreateSchema, evcUpdateSchema } from "@/lib/evc-schemas";
 
 /** Statuses that mean a visit is still live, so a second one would be a duplicate. */
@@ -102,15 +102,28 @@ export const POST = withAuth("evc:schedule", async ({ actor, req, ip, userAgent 
     );
 
     return evc;
-  });
+  }, TX_OPTIONS);
 
   return jsonOk(created, 201);
 });
 
-export const PATCH = withAuth("evc:schedule", async ({ actor, req, ip, userAgent }) => {
+export const PATCH = withAuth(null, async ({ actor, req, ip, userAgent }) => {
   const body = parseBody(evcUpdateSchema, await req.json());
   const existing = await prisma.evcSchedule.findUnique({ where: { id: body.id } });
   if (!existing) return jsonError("EVC schedule not found", 404);
+
+  // EVC members can record visit observations and mark the visit completed if assigned
+  if (actor.role === "EVC_MEMBER") {
+    assertCan(actor, "evc:record");
+    if (!existing.memberIds.includes(actor.id)) {
+      return jsonError("You are not assigned as a committee member for this visit", 403);
+    }
+    if (body.memberIds || body.scheduledFor) {
+      return jsonError("EVC members are not permitted to change committee members or scheduled dates", 403);
+    }
+  } else {
+    assertCan(actor, "evc:schedule");
+  }
 
   const application = await caseDetail(actor, existing.applicationId);
   if (!application) return jsonError("Application not found in your scope", 404);
@@ -155,7 +168,7 @@ export const PATCH = withAuth("evc:schedule", async ({ actor, req, ip, userAgent
     );
 
     return evc;
-  });
+  }, TX_OPTIONS);
 
   return jsonOk(updated);
 });

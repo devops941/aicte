@@ -1,12 +1,13 @@
 import { z } from "zod";
 import { jsonError, jsonOk, parseBody, withAuth } from "@/lib/api";
-import { prisma } from "@/lib/db";
+import { prisma, TX_OPTIONS } from "@/lib/db";
 import { writeAudit } from "@/lib/audit/writer";
 import { institutionScope } from "@/lib/auth/rbac";
 import {
   institutionCreateSchema as createSchema,
   institutionUpdateSchema as updateSchema,
 } from "@/lib/admin-schemas";
+import { generateAicteId } from "@/lib/utils";
 import type { Prisma } from "@prisma/client";
 
 const listQuery = z.object({
@@ -82,10 +83,22 @@ export const GET = withAuth("application:read", async ({ actor, req }) => {
 export const POST = withAuth("admin:config", async ({ actor, req, ip, userAgent }) => {
   const body = parseBody(createSchema, await req.json());
 
-  const duplicate = await prisma.institution.findFirst({
-    where: { aicteId: { equals: body.aicteId.trim(), mode: "insensitive" } },
+  let aicteId = body.aicteId?.trim() || generateAicteId();
+
+  let duplicate = await prisma.institution.findFirst({
+    where: { aicteId: { equals: aicteId, mode: "insensitive" } },
     select: { id: true },
   });
+
+  // If a generated id happened to collide, try generating once more
+  if (duplicate && !body.aicteId) {
+    aicteId = generateAicteId();
+    duplicate = await prisma.institution.findFirst({
+      where: { aicteId: { equals: aicteId, mode: "insensitive" } },
+      select: { id: true },
+    });
+  }
+
   if (duplicate) return jsonError("An institution with that AICTE id already exists", 409);
 
   const region = await prisma.region.findUnique({ where: { id: body.regionId }, select: { id: true } });
@@ -94,7 +107,7 @@ export const POST = withAuth("admin:config", async ({ actor, req, ip, userAgent 
   const created = await prisma.$transaction(async (tx) => {
     const row = await tx.institution.create({
       data: {
-        aicteId: body.aicteId.trim(),
+        aicteId,
         name: body.name.trim(),
         state: body.state.trim(),
         district: body.district?.trim() || null,
@@ -102,6 +115,13 @@ export const POST = withAuth("admin:config", async ({ actor, req, ip, userAgent 
         regionId: body.regionId,
         contactEmail: body.contactEmail?.trim() || null,
         contactPhone: body.contactPhone?.trim() || null,
+        address: body.address?.trim() ?? null,
+        pincode: body.pincode?.trim() ?? null,
+        ownerName: body.ownerName?.trim() ?? null,
+        ownerEmail: body.ownerEmail?.trim() ?? null,
+        ownerPhone: body.ownerPhone?.trim() ?? null,
+        ownerAddress: body.ownerAddress?.trim() ?? null,
+        ownerPincode: body.ownerPincode?.trim() ?? null,
       },
     });
     await writeAudit(
@@ -118,7 +138,7 @@ export const POST = withAuth("admin:config", async ({ actor, req, ip, userAgent 
       tx,
     );
     return row;
-  });
+  }, TX_OPTIONS);
 
   return jsonOk(created, 201);
 });
@@ -150,6 +170,13 @@ export const PATCH = withAuth("admin:config", async ({ actor, req, ip, userAgent
     ...(body.city !== undefined ? { city: body.city?.trim() || null } : {}),
     ...(body.contactEmail !== undefined ? { contactEmail: body.contactEmail?.trim() || null } : {}),
     ...(body.contactPhone !== undefined ? { contactPhone: body.contactPhone?.trim() || null } : {}),
+    ...(body.address !== undefined ? { address: body.address?.trim() ?? null } : {}),
+    ...(body.pincode !== undefined ? { pincode: body.pincode?.trim() ?? null } : {}),
+    ...(body.ownerName !== undefined ? { ownerName: body.ownerName?.trim() ?? null } : {}),
+    ...(body.ownerEmail !== undefined ? { ownerEmail: body.ownerEmail?.trim() ?? null } : {}),
+    ...(body.ownerPhone !== undefined ? { ownerPhone: body.ownerPhone?.trim() ?? null } : {}),
+    ...(body.ownerAddress !== undefined ? { ownerAddress: body.ownerAddress?.trim() ?? null } : {}),
+    ...(body.ownerPincode !== undefined ? { ownerPincode: body.ownerPincode?.trim() ?? null } : {}),
     ...(body.isActive !== undefined ? { isActive: body.isActive } : {}),
     ...(body.regionId !== undefined ? { region: { connect: { id: body.regionId } } } : {}),
   };
@@ -176,7 +203,7 @@ export const PATCH = withAuth("admin:config", async ({ actor, req, ip, userAgent
       tx,
     );
     return row;
-  });
+  }, TX_OPTIONS);
 
   return jsonOk(updated);
 });

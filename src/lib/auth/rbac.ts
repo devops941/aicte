@@ -178,18 +178,26 @@ const ALL: Prisma.ApplicationWhereInput = {};
  * cases assigned to them or their region, and read-only roles to everything.
  */
 export function applicationScope(actor: Actor): Prisma.ApplicationWhereInput {
+  // Hybrid scope: in addition to the region/assignment rules below, an officer
+  // also sees the cases of any institution they are assigned to (the review team
+  // configured on the institution's Assign page).
+  const assignedInstitution: Prisma.ApplicationWhereInput = {
+    institution: { staff: { some: { userId: actor.id } } },
+  };
   switch (actor.role) {
     case "INSTITUTION_ADMIN":
-      if (!actor.institutionId) return { id: "__none__" };
+      if (!actor.institutionId) return { id: { in: [] } };
       return { institutionId: actor.institutionId };
     case "REGIONAL_OFFICER":
-      if (!actor.regionId) return { id: "__none__" };
-      return { regionId: actor.regionId };
+      return {
+        OR: [...(actor.regionId ? [{ regionId: actor.regionId }] : []), assignedInstitution],
+      };
     case "EVC_MEMBER":
       return {
         OR: [
           { evcSchedules: { some: { memberIds: { has: actor.id } } } },
           { assignments: { some: { userId: actor.id, releasedAt: null } } },
+          assignedInstitution,
         ],
       };
     case "BUREAU_OFFICER":
@@ -197,6 +205,7 @@ export function applicationScope(actor: Actor): Prisma.ApplicationWhereInput {
         OR: [
           { assignments: { some: { userId: actor.id, releasedAt: null } } },
           ...(actor.regionId ? [{ regionId: actor.regionId }] : []),
+          assignedInstitution,
         ],
       };
     case "COMPETENT_AUTHORITY":
@@ -205,7 +214,7 @@ export function applicationScope(actor: Actor): Prisma.ApplicationWhereInput {
     case "AUDITOR":
       return ALL;
     default:
-      return { id: "__none__" };
+      return { id: { in: [] } };
   }
 }
 
@@ -221,12 +230,23 @@ export function scopedWhere(
 }
 
 export function institutionScope(actor: Actor): Prisma.InstitutionWhereInput {
-  if (actor.role === "INSTITUTION_ADMIN" && actor.institutionId) {
+  if (actor.role === "INSTITUTION_ADMIN") {
+    if (!actor.institutionId) return { id: { in: [] } };
     return { id: actor.institutionId };
   }
-  if (actor.role === "REGIONAL_OFFICER" && actor.regionId) {
-    return { regionId: actor.regionId };
+  if (
+    actor.role === "REGIONAL_OFFICER" ||
+    actor.role === "BUREAU_OFFICER" ||
+    actor.role === "EVC_MEMBER"
+  ) {
+    return {
+      OR: [
+        ...(actor.regionId ? [{ regionId: actor.regionId }] : []),
+        { staff: { some: { userId: actor.id } } },
+      ],
+    };
   }
+  // COMPETENT_AUTHORITY / SYSTEM_ADMIN / SUPER_ADMIN / AUDITOR: full access
   return {};
 }
 

@@ -24,13 +24,17 @@ describe("row-level scoping", () => {
     expect(scope).toEqual({ id: "__none__" });
   });
 
-  it("pins a regional officer to their own region", () => {
+  it("scopes a regional officer to their region or an assigned institution", () => {
     const scope = applicationScope(actor({ role: "REGIONAL_OFFICER" as Role, regionId: "region-south" }));
-    expect(scope).toEqual({ regionId: "region-south" });
+    expect(scope).toEqual({
+      OR: [{ regionId: "region-south" }, { institution: { staff: { some: { userId: "u1" } } } }],
+    });
   });
 
-  it("returns an impossible filter when a regional officer has no region", () => {
-    expect(applicationScope(actor({ role: "REGIONAL_OFFICER" as Role }))).toEqual({ id: "__none__" });
+  it("scopes a regional officer with no region to only assigned institutions", () => {
+    expect(applicationScope(actor({ role: "REGIONAL_OFFICER" as Role }))).toEqual({
+      OR: [{ institution: { staff: { some: { userId: "u1" } } } }],
+    });
   });
 
   it("limits an EVC member to visits and assignments", () => {
@@ -44,7 +48,12 @@ describe("row-level scoping", () => {
 
   it("combines scope with an extra filter using AND", () => {
     const where = scopedWhere(actor({ role: "REGIONAL_OFFICER" as Role, regionId: "r1" }), { status: "IN_PROCESS" as never });
-    expect(where).toEqual({ AND: [{ regionId: "r1" }, { status: "IN_PROCESS" }] });
+    expect(where).toEqual({
+      AND: [
+        { OR: [{ regionId: "r1" }, { institution: { staff: { some: { userId: "u1" } } } }] },
+        { status: "IN_PROCESS" },
+      ],
+    });
   });
 
   it("does not wrap a single condition unnecessarily", () => {

@@ -27,7 +27,7 @@ let otherRegionMemberId = "";
 let adminId = "";
 
 const actor = (over: Partial<Actor> & { role: Role }): Actor => ({
-  id: over.id ?? "u1",
+  id: over.id ?? "00000000-0000-0000-0000-000000000001",
   email: "actor@aicte.gov.in",
   name: "Actor",
   regionId: null,
@@ -110,7 +110,7 @@ beforeAll(async () => {
     },
   });
   applicationId = application.id;
-});
+}, 60000);
 
 afterAll(async () => {
   await prisma.evcSchedule.deleteMany({ where: { applicationId } });
@@ -127,7 +127,7 @@ afterAll(async () => {
   await prisma.institution.deleteMany({ where: { id: institutionId } });
   await prisma.region.deleteMany({ where: { id: { in: [regionId, otherRegionId] } } });
   await prisma.$disconnect();
-});
+}, 60000);
 
 describe("EVC create payload validation (unit)", () => {
   const valid = {
@@ -286,7 +286,12 @@ describe("EVC authorization (integration)", () => {
 
   it("denies a regional officer another region's row", () => {
     const scope = applicationScope(actor({ role: "REGIONAL_OFFICER" as Role, regionId: otherRegionId }));
-    expect(scope).toEqual({ regionId: otherRegionId });
+    expect(scope).toEqual({
+      OR: [
+        { regionId: otherRegionId },
+        { institution: { staff: { some: { userId: "00000000-0000-0000-0000-000000000001" } } } },
+      ],
+    });
   });
 });
 
@@ -314,17 +319,22 @@ describe("escalation persistence and conflict handling (integration)", () => {
     expect(dup.id).toBeTruthy();
     const dupes = await prisma.escalationPolicy.count({ where: { level: 2, scope: null, regionId: null, description: { startsWith: PREFIX } } });
     expect(dupes).toBeGreaterThan(1);
-    await prisma.escalationPolicy.delete({ where: { id: dup.id } });
+    // Do not delete dup here — the next test asserts that the application-layer
+    // duplicate check can find this row. afterAll removes all PREFIX rows.
   });
 
   it("application-level duplicate check catches what the index misses", async () => {
+    // The preceding test intentionally left both level-2 rows alive to prove
+    // that the DB unique index did not catch the duplicate. This test then
+    // mirrors what the route does: look for any *other* global row at that
+    // level before allowing an insert.
     const existing = await prisma.escalationPolicy.findFirst({
       where: { scope: null, regionId: null, level: 2, description: `${PREFIX} rung two` },
       select: { id: true },
     });
     expect(existing).not.toBeNull();
     const wouldConflict = await prisma.escalationPolicy.findFirst({
-      where: { scope: null, regionId: null, level: 2, id: { not: existing!.id } },
+      where: { scope: null, regionId: null, level: 2, description: { startsWith: PREFIX }, id: { not: existing!.id } },
       select: { id: true },
     });
     expect(wouldConflict).not.toBeNull();

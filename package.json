@@ -15,7 +15,8 @@
     "worker": "tsx worker/index.ts",
     "worker:once": "tsx worker/index.ts --once",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "seed:workflows": "tsx prisma/seed-workflows.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -28,6 +29,7 @@
     "clsx": "^2.1.1",
     "dotenv": "^17.4.2",
     "framer-motion": "^14.7.1",
+    "imagekit": "^6.0.0",
     "lucide-react": "^1.63.0",
     "next": "^16.4.3",
     "next-auth": "^5.0.0-beta.32",

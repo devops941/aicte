@@ -9,7 +9,7 @@ import type { NextAuthConfig, Session } from "next-auth";
  * needs the database is added in `src/auth.ts`, which runs on Node.
  */
 
-export const PUBLIC_PATHS = ["/login", "/api/auth", "/api/health", "/api/worker", "/verify", "/"];
+export const PUBLIC_PATHS = ["/login", "/logout", "/api/auth", "/api/health", "/api/worker", "/verify", "/"];
 
 export const authConfig = {
   trustHost: true,

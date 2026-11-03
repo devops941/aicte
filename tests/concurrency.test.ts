@@ -40,12 +40,12 @@ beforeAll(async () => {
   // Confirm the database is reachable and start from a verified chain.
   const baseline = await chainTailIsIntact();
   expect(baseline.valid).toBe(true);
-});
+}, 60000);
 
 afterAll(async () => {
   await prisma.auditLog.deleteMany({ where: { entityId: { startsWith: PREFIX } } });
   await prisma.$disconnect();
-});
+}, 60000);
 
 describe("application number allocation", () => {
   it("hands out unique, consecutive numbers under concurrent creation", async () => {

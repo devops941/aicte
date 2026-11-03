@@ -50,7 +50,7 @@ export function UserForm({
   onDone,
 }: {
   regions: Option[];
-  institutions: Option[];
+  institutions: { id: string; name: string; aicteId: string }[];
   editing: EditableUser | null;
   actorRole: string;
   onDone: () => void;
@@ -65,6 +65,10 @@ export function UserForm({
     institutionId: editing?.institutionId ?? "",
     designation: editing?.designation ?? "",
     phone: editing?.phone ?? "",
+  });
+  const [instQuery, setInstQuery] = useState(() => {
+    const cur = institutions.find((i) => i.id === editing?.institutionId);
+    return cur ? cur.name : "";
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,6 +85,11 @@ export function UserForm({
     e.preventDefault();
     setBusy(true);
     setError(null);
+    if (form.role === "INSTITUTION_ADMIN" && !form.institutionId) {
+      setError("Select an institution for an institution admin.");
+      setBusy(false);
+      return;
+    }
     try {
       const payload: Record<string, unknown> = {
         name: form.name,
@@ -200,20 +209,46 @@ export function UserForm({
               ))}
             </select>
           </div>
-          <div>
-            <label htmlFor="u-institution" className="label">
-              Institution
-            </label>
-            <select id="u-institution" className="input" value={form.institutionId} onChange={(e) => set("institutionId", e.target.value)}>
-              <option value="">None</option>
-              {institutions.map((i) => (
-                <option key={i.id} value={i.id}>
-                  {i.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
+          {form.role === "INSTITUTION_ADMIN" && (
+            <div className="sm:col-span-2">
+              <label className="label">Institution <span className="text-danger">*</span></label>
+              <input
+                type="text"
+                className="input"
+                placeholder="Search by institution name or AICTE id…"
+                value={instQuery}
+                onChange={(e) => {
+                  setInstQuery(e.target.value);
+                  set("institutionId", "");
+                }}
+              />
+              {instQuery && !form.institutionId && (
+                <div className="mt-1 max-h-44 overflow-auto rounded-xl border border-line bg-surface">
+                  {institutions
+                    .filter((i) => `${i.name} ${i.aicteId}`.toLowerCase().includes(instQuery.toLowerCase()))
+                    .slice(0, 20)
+                    .map((i) => (
+                      <button
+                        key={i.id}
+                        type="button"
+                        onClick={() => {
+                          set("institutionId", i.id);
+                          setInstQuery(i.name);
+                        }}
+                        className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-xs transition-colors hover:bg-canvas"
+                      >
+                        <span className="truncate text-ink">{i.name}</span>
+                        <span className="shrink-0 font-mono text-[10px] text-muted">{i.aicteId}</span>
+                      </button>
+                    ))}
+                  {institutions.filter((i) => `${i.name} ${i.aicteId}`.toLowerCase().includes(instQuery.toLowerCase())).length === 0 && (
+                    <p className="px-3 py-2 text-[11px] text-muted">No matching institution. Create it first under Institutions.</p>
+                  )}
+                </div>
+              )}
+              {form.institutionId && <p className="mt-1 text-[10px] text-ok">Institution selected.</p>}
+            </div>
+          )}
           {error && (
             <p role="alert" className="rounded-xl border border-danger/30 bg-danger/5 px-3 py-2 text-xs text-danger sm:col-span-2">
               {error}

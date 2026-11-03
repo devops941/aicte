@@ -21,5 +21,11 @@ export const prisma = globalForPrisma.prisma ?? createClient();
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
+/** Default transaction options with generous timeout for remote serverless databases (e.g. Neon) */
+export const TX_OPTIONS = {
+  maxWait: 15000,
+  timeout: 30000,
+} as const;
+
 /** Exposed so scripts and tests connect through the same adapter configuration. */
 export { createClient as createPrismaClient };

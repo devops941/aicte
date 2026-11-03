@@ -1,9 +1,11 @@
 import bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
 import { jsonError, jsonOk, parseBody, withAuth } from "@/lib/api";
-import { prisma } from "@/lib/db";
+import { prisma, TX_OPTIONS } from "@/lib/db";
 import { writeAudit } from "@/lib/audit/writer";
 import { can } from "@/lib/auth/rbac";
+import { ROLE_LABELS } from "@/lib/constants";
+import { sendMail, type MailMessage } from "@/lib/notifications/mailer";
 import {
   assertMayAssignRole,
   assertNotLastSuperAdmin,
@@ -74,12 +76,8 @@ export const POST = withAuth("admin:users", async ({ actor, req, ip, userAgent }
 
   assertMayAssignRole(actor, body.role);
   if (await emailTaken(body.email)) return jsonError("An account with that email already exists", 409);
-
-  if (body.role === "REGIONAL_OFFICER" && !body.regionId) {
-    return jsonError("A regional officer needs a region", 422);
-  }
   if (body.role === "INSTITUTION_ADMIN" && !body.institutionId) {
-    return jsonError("An institution admin needs an institution", 422);
+    return jsonError("An institution admin must be linked to an institution", 422);
   }
 
   const passwordHash = await bcrypt.hash(body.password, 12);
@@ -119,9 +117,13 @@ export const POST = withAuth("admin:users", async ({ actor, req, ip, userAgent }
       tx,
     );
     return row;
-  });
+  }, TX_OPTIONS);
 
-  return jsonOk(created, 201);
+  // Email the new user their credentials. Best-effort: a mail failure does not
+  // undo the account, but the delivery result is reported back to the caller.
+  const mail = await sendMail(welcomeEmail(created.email, created.name, body.password, created.role));
+
+  return jsonOk({ ...created, emailDelivered: mail.delivered, emailTransport: mail.transport }, 201);
 });
 
 /** Edits an account: profile fields, role, scope and activation. */
@@ -145,6 +147,9 @@ export const PATCH = withAuth("admin:users", async ({ actor, req, ip, userAgent 
     if (existing.role === "SUPER_ADMIN" && actor.role !== "SUPER_ADMIN") {
       return jsonError("Only a Super Admin may modify a Super Admin account", 403);
     }
+  }
+  if (body.role === "INSTITUTION_ADMIN" && !body.institutionId && !existing.institutionId) {
+    return jsonError("An institution admin must be linked to an institution", 422);
   }
   assertNotSelfDemotion(actor, body.id, body.role, body.isActive === false);
   await assertNotLastSuperAdmin(body.id, {
@@ -206,7 +211,7 @@ export const PATCH = withAuth("admin:users", async ({ actor, req, ip, userAgent 
       tx,
     );
     return row;
-  });
+  }, TX_OPTIONS);
 
   return jsonOk(updated);
 });
@@ -250,3 +255,20 @@ export const PUT = withAuth("admin:users", async ({ actor, req, ip, userAgent })
 
   return jsonOk({ id: body.id, password: plaintext });
 });
+
+/** The welcome email sent to a newly created account with its sign-in details. */
+function welcomeEmail(email: string, name: string, password: string, role: string): MailMessage {
+  const roleLabel = ROLE_LABELS[role] ?? role;
+  const text = [
+    `Hello ${name},`,
+    ``,
+    `An account has been created for you on the AICTE Approval Workflow Platform.`,
+    ``,
+    `Email:    ${email}`,
+    `Password: ${password}`,
+    `Role:     ${roleLabel}`,
+    ``,
+    `Please sign in and change your password from your profile.`,
+  ].join("\n");
+  return { to: email, subject: "Your AICTE Workflow Platform account", text };
+}

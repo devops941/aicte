@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { safeNextPath } from "@/lib/auth/redirect";
+import { ROLE_LABELS } from "@/lib/constants";
 import {
   AlertCircle,
   ArrowRight,
@@ -19,17 +20,6 @@ import {
   Sparkles,
 } from "lucide-react";
 
-const DEMO_ACCOUNTS = [
-  { label: "Super Admin", email: "superadmin@aicte.gov.in", role: "Platform owner, no case decisions" },
-  { label: "System Admin", email: "admin@gmail.com", role: "Configuration, users, SLA" },
-  { label: "Institution", email: "institution@sri.edu.in", role: "Submit and respond" },
-  { label: "Regional Officer", email: "ro.south@aicte.gov.in", role: "Scrutiny, Southern region" },
-  { label: "Bureau Officer", email: "bureau.south@aicte.gov.in", role: "Stage processing" },
-  { label: "EVC Member", email: "evc.member1@aicte.gov.in", role: "Visit observations" },
-  { label: "Competent Authority", email: "authority@aicte.gov.in", role: "Statutory decisions" },
-  { label: "Auditor", email: "auditor@aicte.gov.in", role: "Read-only oversight" },
-];
-
 const DEMO_PASSWORD = "Admin@123";
 
 const FEATURES = [
@@ -39,12 +29,18 @@ const FEATURES = [
   { icon: Sparkles, title: "Assistive, never decisive", body: "AI suggests and cites its sources. It never changes a stage or status." },
 ];
 
-export function LoginForm({ showDemoAccounts = false }: { showDemoAccounts?: boolean }) {
+export function LoginForm({
+  showDemoAccounts = false,
+  demoAccounts = [],
+}: {
+  showDemoAccounts?: boolean;
+  demoAccounts?: { email: string; name: string; role: string }[];
+}) {
   const router = useRouter();
   const params = useSearchParams();
   const nextPath = safeNextPath(params.get("next"));
 
-  const [email, setEmail] = useState(showDemoAccounts ? "admin@gmail.com" : "");
+  const [email, setEmail] = useState(showDemoAccounts && demoAccounts[0] ? demoAccounts[0].email : "");
   const [password, setPassword] = useState(showDemoAccounts ? DEMO_PASSWORD : "");
   const [totp, setTotp] = useState("");
   const [showTotp, setShowTotp] = useState(false);
@@ -267,54 +263,59 @@ export function LoginForm({ showDemoAccounts = false }: { showDemoAccounts?: boo
           </button>
 
           {showDemoAccounts && (
-          <div className="mt-6 rounded-2xl border border-line bg-surface p-4">
-            <button
-              type="button"
-              onClick={() => setShowAccounts((v) => !v)}
-              className="flex w-full items-center justify-between text-left"
-            >
-              <span className="flex items-center gap-2 text-xs font-semibold text-ink">
-                <CheckCircle2 className="h-3.5 w-3.5 text-ok" />
-                Demo accounts
-              </span>
-              <span className="text-[11px] text-brand">{showAccounts ? "Hide" : "Show"}</span>
-            </button>
+            <div className="mt-6 rounded-2xl border border-line bg-surface p-4">
+              <button
+                type="button"
+                onClick={() => setShowAccounts((v) => !v)}
+                className="flex w-full items-center justify-between text-left"
+              >
+                <span className="flex items-center gap-2 text-xs font-semibold text-ink">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-ok" />
+                  Demo accounts
+                </span>
+                <span className="text-[11px] text-brand">{showAccounts ? "Hide" : "Show"}</span>
+              </button>
 
-            <AnimatePresence initial={false}>
-              {showAccounts && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="overflow-hidden"
-                >
-                  <div className="mt-3 space-y-1">
-                    {DEMO_ACCOUNTS.map((a) => (
-                      <button
-                        key={a.email}
-                        type="button"
-                        onClick={() => {
-                          setEmail(a.email);
-                          setPassword(DEMO_PASSWORD);
-                          setError(null);
-                        }}
-                        className="flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-canvas"
-                      >
-                        <span className="min-w-0">
-                          <span className="block truncate text-[11px] font-semibold text-ink">{a.label}</span>
-                          <span className="block truncate text-[10px] text-muted">{a.role}</span>
-                        </span>
-                        <span className="shrink-0 text-[10px] text-brand">Use</span>
-                      </button>
-                    ))}
-                  </div>
-                  <p className="mt-3 border-t border-line pt-2.5 text-[10px] text-muted">
-                    All demo accounts share the password <span className="font-mono font-semibold">{DEMO_PASSWORD}</span>
-                  </p>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+              <AnimatePresence initial={false}>
+                {showAccounts && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="mt-3 space-y-1">
+                      {demoAccounts.length === 0 && (
+                        <p className="px-2.5 py-2 text-[11px] text-muted">
+                          No accounts yet. Create users and the first of each role will appear here.
+                        </p>
+                      )}
+                      {demoAccounts.map((a) => (
+                        <button
+                          key={a.email}
+                          type="button"
+                          onClick={() => {
+                            setEmail(a.email);
+                            setPassword(DEMO_PASSWORD);
+                            setError(null);
+                          }}
+                          className="flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-canvas"
+                        >
+                          <span className="min-w-0">
+                            <span className="block truncate text-[11px] font-semibold text-ink">{ROLE_LABELS[a.role] ?? a.role}</span>
+                            <span className="block truncate text-[10px] text-muted">{a.email}</span>
+                          </span>
+                          <span className="shrink-0 text-[10px] text-brand">Use</span>
+                        </button>
+                      ))}
+                    </div>
+                    <p className="mt-3 border-t border-line pt-2.5 text-[10px] text-muted">
+                      All demo accounts share the password <span className="font-mono font-semibold">{DEMO_PASSWORD}</span>
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           )}
         </motion.div>
       </div>

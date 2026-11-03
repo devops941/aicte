@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { jsonOk, parseBody, withAuth } from "@/lib/api";
 import { performTransition } from "@/lib/workflow/service";
+import { assertCan } from "@/lib/auth/rbac";
 
 const schema = z.object({
   action: z.enum([
@@ -23,11 +24,25 @@ const schema = z.object({
 });
 
 /**
- * Applies one workflow move. The service enforces the transition guard, role,
- * remark rule and row-level scope; this handler only parses and reports.
+ * Applies one workflow move. Checks permission appropriate for the specific action,
+ * allowing institutions to submit/withdraw/respond and officers to scrutinize/forward/decide.
+ * The service enforces the transition guard, role rules, remarks and row-level scope.
  */
-export const POST = withAuth("workflow:transition", async ({ actor, req, ip, userAgent }, params) => {
+export const POST = withAuth(null, async ({ actor, req, ip, userAgent }, params) => {
   const body = parseBody(schema, await req.json());
+
+  if (body.action === "SUBMIT" || body.action === "RESUBMIT") {
+    assertCan(actor, "application:submit");
+  } else if (body.action === "WITHDRAW") {
+    assertCan(actor, "application:withdraw");
+  } else if (body.action === "RESPOND_CLARIFICATION") {
+    assertCan(actor, "clarification:respond");
+  } else if (body.action === "APPROVE" || body.action === "REJECT") {
+    assertCan(actor, "decision:record");
+  } else {
+    assertCan(actor, "workflow:transition");
+  }
+
   const outcome = await performTransition({
     actor,
     applicationId: params.id,

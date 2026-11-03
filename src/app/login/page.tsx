@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { LoginForm } from "./login-form";
+import { demoAccounts } from "@/lib/queries";
 
 export const metadata: Metadata = { title: "Sign in" };
 
@@ -14,10 +15,11 @@ export default async function LoginPage() {
   // Displayed by default in both development and production unless explicitly
   // disabled with SHOW_DEMO_ACCOUNTS=false.
   const showDemo = process.env.SHOW_DEMO_ACCOUNTS !== "false";
+  const accounts = showDemo ? await demoAccounts() : [];
 
   return (
     <Suspense fallback={<div className="min-h-screen bg-canvas" />}>
-      <LoginForm showDemoAccounts={showDemo} />
+      <LoginForm showDemoAccounts={showDemo} demoAccounts={accounts} />
     </Suspense>
   );
 }

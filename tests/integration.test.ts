@@ -158,7 +158,7 @@ beforeAll(async () => {
       enteredAt: application.createdAt,
     },
   });
-});
+}, 60000);
 
 afterAll(async () => {
   await prisma.notification.deleteMany({
@@ -176,7 +176,7 @@ afterAll(async () => {
   await prisma.institution.deleteMany({ where: { id: institutionId } });
   await prisma.region.deleteMany({ where: { id: regionId } });
   await prisma.$disconnect();
-});
+}, 60000);
 
 /** Mirrors the service's write path so the test exercises real rows. */
 async function applyTransition(action: string, actorId: string, actorRole: Role, remark?: string) {

@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { applicationScope, institutionScope, type Actor } from "@/lib/auth/rbac";
 import { manageableUserScope } from "@/lib/auth/admin-guards";
 import { buildHolidaySet, classifySla, countWorkingDays, type HolidayLike } from "@/lib/sla/calendar";
-import type { Prisma } from "@prisma/client";
+import type { Prisma, Role, WorkflowAction } from "@prisma/client";
 
 /**
  * Read model for the portals. Every list function takes the actor and applies
@@ -208,6 +208,153 @@ export async function officerWorkload(actor: Actor) {
   return [...map.values()].sort((a, b) => b.open - a.open);
 }
 
+
+export async function ensureWorkflowTransitions(
+  workflowVersion: {
+    id: string;
+    stages: Array<{
+      id: string;
+      code: string;
+      name: string;
+      isInitial?: boolean;
+      isTerminal: boolean;
+      assigneeRole: string;
+      outgoing: Array<{ action: string }>;
+    }>;
+  } | null,
+  client: Prisma.TransactionClient | typeof prisma = prisma,
+): Promise<boolean> {
+  if (!workflowVersion || !workflowVersion.stages || workflowVersion.stages.length === 0) return false;
+
+  const stages = workflowVersion.stages;
+  const initialStage = stages.find((s) => s.isInitial || s.code === "SUBMITTED" || s.code === "SUBMISSION");
+  const scrutinyStage = stages.find((s) => s.code === "SCRUTINY" || s.assigneeRole === "REGIONAL_OFFICER");
+  const clarifStage = stages.find((s) => s.code === "CLARIFICATION" || s.code === "AWAITING_CLARIFICATION");
+  const decisionStage = stages.find(
+    (s) => s.code === "DECISION" || (s.assigneeRole === "COMPETENT_AUTHORITY" && !s.isTerminal),
+  );
+  const terminalStage = stages.find((s) => s.isTerminal || s.code === "APPROVED");
+
+  const toCreate: Array<{
+    fromStageId: string;
+    toStageId: string;
+    action: WorkflowAction;
+    requiredRole: Role;
+    requiresRemark: boolean;
+  }> = [];
+
+  // 1. Initial stage transitions
+  if (initialStage && scrutinyStage) {
+    const existing = new Set(initialStage.outgoing.map((t) => t.action));
+    if (!existing.has("SUBMIT")) {
+      toCreate.push({
+        fromStageId: initialStage.id,
+        toStageId: scrutinyStage.id,
+        action: "SUBMIT",
+        requiredRole: "INSTITUTION_ADMIN",
+        requiresRemark: false,
+      });
+    }
+  }
+
+  // 2. Scrutiny stage transitions
+  if (scrutinyStage) {
+    const existing = new Set(scrutinyStage.outgoing.map((t) => t.action));
+    if (clarifStage && !existing.has("RETURN_FOR_CLARIFICATION")) {
+      toCreate.push({
+        fromStageId: scrutinyStage.id,
+        toStageId: clarifStage.id,
+        action: "RETURN_FOR_CLARIFICATION",
+        requiredRole: "REGIONAL_OFFICER",
+        requiresRemark: true,
+      });
+    }
+    if (decisionStage && !existing.has("FORWARD")) {
+      toCreate.push({
+        fromStageId: scrutinyStage.id,
+        toStageId: decisionStage.id,
+        action: "FORWARD",
+        requiredRole: "REGIONAL_OFFICER",
+        requiresRemark: true,
+      });
+    }
+    if (decisionStage && !existing.has("RECOMMEND")) {
+      toCreate.push({
+        fromStageId: scrutinyStage.id,
+        toStageId: decisionStage.id,
+        action: "RECOMMEND",
+        requiredRole: "REGIONAL_OFFICER",
+        requiresRemark: true,
+      });
+    }
+  }
+
+  // 3. Clarification stage transitions
+  if (clarifStage && scrutinyStage) {
+    const existing = new Set(clarifStage.outgoing.map((t) => t.action));
+    if (!existing.has("RESPOND_CLARIFICATION")) {
+      toCreate.push({
+        fromStageId: clarifStage.id,
+        toStageId: scrutinyStage.id,
+        action: "RESPOND_CLARIFICATION",
+        requiredRole: "INSTITUTION_ADMIN",
+        requiresRemark: true,
+      });
+    }
+    if (!existing.has("RESUBMIT")) {
+      toCreate.push({
+        fromStageId: clarifStage.id,
+        toStageId: scrutinyStage.id,
+        action: "RESUBMIT",
+        requiredRole: "INSTITUTION_ADMIN",
+        requiresRemark: true,
+      });
+    }
+  }
+
+  // 4. Decision stage transitions (Competent Authority)
+  if (decisionStage && terminalStage) {
+    const existing = new Set(decisionStage.outgoing.map((t) => t.action));
+    if (!existing.has("APPROVE")) {
+      toCreate.push({
+        fromStageId: decisionStage.id,
+        toStageId: terminalStage.id,
+        action: "APPROVE",
+        requiredRole: "COMPETENT_AUTHORITY",
+        requiresRemark: true,
+      });
+    }
+    if (!existing.has("REJECT")) {
+      toCreate.push({
+        fromStageId: decisionStage.id,
+        toStageId: terminalStage.id,
+        action: "REJECT",
+        requiredRole: "COMPETENT_AUTHORITY",
+        requiresRemark: true,
+      });
+    }
+    if (clarifStage && !existing.has("RETURN_FOR_CLARIFICATION")) {
+      toCreate.push({
+        fromStageId: decisionStage.id,
+        toStageId: clarifStage.id,
+        action: "RETURN_FOR_CLARIFICATION",
+        requiredRole: "COMPETENT_AUTHORITY",
+        requiresRemark: true,
+      });
+    }
+  }
+
+  if (toCreate.length > 0) {
+    await client.workflowTransition.createMany({
+      data: toCreate,
+      skipDuplicates: true,
+    });
+    return true;
+  }
+
+  return false;
+}
+
 export async function caseDetail(actor: Actor, applicationId: string) {
   const scope = applicationScope(actor);
   const where: Prisma.ApplicationWhereInput =
@@ -241,6 +388,19 @@ export async function caseDetail(actor: Actor, applicationId: string) {
       undertakings: { orderBy: { dueAt: "asc" } },
     },
   });
+
+  if (application?.workflowVersion) {
+    const patched = await ensureWorkflowTransitions(application.workflowVersion as never);
+    if (patched && application.workflowVersionId) {
+      const reloadedVersion = await prisma.workflowDefinition.findUnique({
+        where: { id: application.workflowVersionId },
+        include: { stages: { include: { outgoing: true }, orderBy: { sequence: "asc" } } },
+      });
+      if (reloadedVersion) {
+        application.workflowVersion = reloadedVersion;
+      }
+    }
+  }
 
   return application;
 }
@@ -329,6 +489,61 @@ export async function auditPage(limit = 100, offset = 0) {
 
 export async function regionOptions() {
   return prisma.region.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, code: true } });
+}
+
+/** Regions with their institution and user counts, for the admin directory. */
+export async function regionsDirectory() {
+  return prisma.region.findMany({
+    orderBy: { name: "asc" },
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      _count: { select: { institutions: true, users: true } },
+    },
+  });
+}
+
+/** Current staff assignments for an institution, with the assigned user. */
+export async function institutionAssignments(institutionId: string) {
+  return prisma.institutionAssignment.findMany({
+    where: { institutionId },
+    orderBy: [{ role: "asc" }, { createdAt: "asc" }],
+    select: {
+      id: true,
+      role: true,
+      createdAt: true,
+      user: { select: { id: true, name: true, email: true } },
+    },
+  });
+}
+
+/** Active institutions for the admin user-create picker (searchable by name/AICTE id). */
+export async function institutionOptions() {
+  return prisma.institution.findMany({
+    where: { isActive: true },
+    orderBy: { name: "asc" },
+    take: 500,
+    select: { id: true, name: true, aicteId: true },
+  });
+}
+
+/** Active users that can be assigned to an institution team, for the Assign page. */
+export async function assignableUsers() {
+  return prisma.user.findMany({
+    where: {
+      isActive: true,
+      role: { in: ["INSTITUTION_ADMIN", "REGIONAL_OFFICER", "BUREAU_OFFICER", "EVC_MEMBER", "AUDITOR"] },
+    },
+    orderBy: [{ role: "asc" }, { name: "asc" }],
+    take: 500,
+    select: { id: true, name: true, email: true, role: true },
+  });
+}
+
+/** One institution's identity, for the Assign page header. */
+export async function institutionById(id: string) {
+  return prisma.institution.findUnique({ where: { id }, select: { id: true, name: true, aicteId: true } });
 }
 
 /**
@@ -467,13 +682,32 @@ export async function platformStats() {
 }
 
 export async function workflowList() {
-  return prisma.workflowDefinition.findMany({
+  const definitions = await prisma.workflowDefinition.findMany({
     orderBy: [{ applicationType: "asc" }, { version: "desc" }],
     include: {
       stages: { orderBy: { sequence: "asc" }, include: { outgoing: true } },
       _count: { select: { applications: true } },
     },
   });
+
+  let patchedAny = false;
+  for (const def of definitions) {
+    if (await ensureWorkflowTransitions(def as never)) {
+      patchedAny = true;
+    }
+  }
+
+  if (patchedAny) {
+    return prisma.workflowDefinition.findMany({
+      orderBy: [{ applicationType: "asc" }, { version: "desc" }],
+      include: {
+        stages: { orderBy: { sequence: "asc" }, include: { outgoing: true } },
+        _count: { select: { applications: true } },
+      },
+    });
+  }
+
+  return definitions;
 }
 
 export async function userList(actor: Actor) {
@@ -525,7 +759,14 @@ export function liveSla(
   slaWorkingDays: number,
   holidays: Set<string>,
   now = new Date(),
+  status?: string,
+  storedState?: string,
 ) {
+  // A closed case has a settled SLA outcome; never recompute it as live OVERDUE/PAUSED.
+  if (status === "APPROVED" || status === "REJECTED" || status === "WITHDRAWN") {
+    const settled: "BREACHED" | "MET" = storedState === "BREACHED" ? "BREACHED" : "MET";
+    return { state: settled, elapsed: slaWorkingDays, remaining: 0, percent: 100 };
+  }
   if (pausedAt) return { state: "PAUSED" as const, elapsed: 0, remaining: 0, percent: 0 };
   if (!dueAt) return { state: "ON_TRACK" as const, elapsed: 0, remaining: slaWorkingDays, percent: 0 };
   const entered = new Date(dueAt.getTime() - slaWorkingDays * 86400000);
@@ -533,4 +774,72 @@ export function liveSla(
   if (now > dueAt) return { state: "OVERDUE" as const, elapsed: c.elapsed, remaining: 0, percent: 100 };
   const remaining = countWorkingDays(now, dueAt, holidays);
   return { state: c.state, elapsed: c.elapsed, remaining, percent: c.percent };
+}
+
+
+export type InstitutionOption = {
+  id: string;
+  name: string;
+  aicteId: string;
+  state: string;
+  city: string | null;
+};
+
+/**
+ * First-created active user in each role, for the login page demo panel. Returns
+ * at most one account per role (the earliest by createdAt), so a second user in
+ * the same role never appears.
+ */
+export async function demoAccounts() {
+  const users = await prisma.user.findMany({
+    where: { isActive: true },
+    orderBy: { createdAt: "asc" },
+    select: { email: true, name: true, role: true },
+  });
+  const seen = new Set<string>();
+  const out: { email: string; name: string; role: string }[] = [];
+  for (const u of users) {
+    if (seen.has(u.role)) continue;
+    seen.add(u.role);
+    out.push(u);
+  }
+  return out;
+}
+
+/** Active institutions that an applicant may select when creating an application. */
+export async function eligibleInstitutionsForApplication(actor: Actor): Promise<InstitutionOption[]> {
+  if (actor.role === "SUPER_ADMIN" || actor.role === "SYSTEM_ADMIN") {
+    return prisma.institution.findMany({
+      where: { isActive: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, aicteId: true, state: true, city: true },
+    });
+  }
+
+  const staffAssignments = await prisma.institutionAssignment.findMany({
+    where: { userId: actor.id },
+    select: { institutionId: true },
+  });
+
+  const ids = Array.from(
+    new Set([
+      ...(actor.institutionId ? [actor.institutionId] : []),
+      ...staffAssignments.map((a) => a.institutionId),
+    ]),
+  );
+
+  if (ids.length > 0) {
+    const list = await prisma.institution.findMany({
+      where: { id: { in: ids }, isActive: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, aicteId: true, state: true, city: true },
+    });
+    if (list.length > 0) return list;
+  }
+
+  return prisma.institution.findMany({
+    where: { isActive: true },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, aicteId: true, state: true, city: true },
+  });
 }

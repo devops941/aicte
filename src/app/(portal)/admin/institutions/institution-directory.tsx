@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Building2, Search } from "lucide-react";
+import Link from "next/link";
+import { Building2, Search, UsersRound } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, EmptyState } from "@/components/ui/card";
 import { InstitutionForm, InstitutionRowActions, type InstitutionRow } from "./institution-form";
@@ -53,6 +54,7 @@ export function InstitutionDirectory({
     <div className="space-y-5">
       {canEdit && showForm && (
         <InstitutionForm
+          key={editing?.id ?? "new"}
           regions={regions}
           editing={editing}
           onDone={() => {
@@ -165,7 +167,13 @@ export function InstitutionDirectory({
                     </td>
                     {canEdit && (
                       <td className="td">
-                        <InstitutionRowActions row={r} onEdit={() => startEdit(r)} />
+                        <div className="flex items-center justify-end gap-2">
+                          <Link href={`/admin/institutions/${r.id}/assign`} className="btn-ghost btn-sm">
+                            <UsersRound className="h-3.5 w-3.5" />
+                            Assign
+                          </Link>
+                          <InstitutionRowActions row={r} onEdit={() => startEdit(r)} />
+                        </div>
                       </td>
                     )}
                   </tr>

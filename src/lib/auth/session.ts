@@ -48,7 +48,10 @@ export async function requireActor(): Promise<Actor> {
 /** For pages: redirects to login rather than throwing. */
 export async function requirePageActor(): Promise<Actor> {
   const actor = await currentActor();
-  if (!actor) redirect("/login");
+  // A null actor here means the cookie passed middleware (validly signed) but
+  // the user is gone or deactivated. Go through /logout to clear the cookie,
+  // not /login, which would bounce straight back and loop.
+  if (!actor) redirect("/logout");
   return actor;
 }
 
