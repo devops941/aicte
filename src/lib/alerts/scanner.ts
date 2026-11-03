@@ -12,6 +12,7 @@ import {
   slaDueSoonKey,
   slaOverdueKey,
   undertakingDueKey,
+  dedupe,
   type OutboxItem,
 } from "@/lib/notifications/outbox";
 import { sendMail } from "@/lib/notifications/mailer";
@@ -46,8 +47,7 @@ async function heartbeat(job: string, status: string, detail?: string) {
 
 async function queue(items: OutboxItem[]): Promise<number> {
   if (items.length === 0) return 0;
-  const seen = new Set<string>();
-  const unique = items.filter((i) => (seen.has(i.dedupeKey) ? false : (seen.add(i.dedupeKey), true)));
+  const unique = dedupe(items);
   const result = await prisma.notification.createMany({ data: unique, skipDuplicates: true });
   return result.count;
 }

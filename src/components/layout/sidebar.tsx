@@ -136,6 +136,7 @@ export function Sidebar({
                 <span
                   className={cn(
                     "relative z-10 flex h-5 min-w-5 items-center justify-center rounded-full bg-danger px-1.5 text-[10px] font-bold text-white",
+                    !collapsed && "ml-auto",
                     collapsed && "absolute right-1 top-1",
                   )}
                 >

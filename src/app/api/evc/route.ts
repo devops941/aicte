@@ -72,7 +72,7 @@ export const POST = withAuth("evc:schedule", async ({ actor, req, ip, userAgent 
           userId: memberId,
           kind: "EVC_REMINDER" as const,
           dedupeKey: `${evcReminderKey(evc.id, 7)}:${memberId}:created`,
-          channel: "EMAIL" as const,
+          channel: "IN_APP" as const,
           title: `EVC visit scheduled for ${application.appNo}`,
           body: `${application.title}${body.venue ? ` at ${body.venue}` : ""} on ${body.scheduledFor.toISOString().slice(0, 10)}.`,
           link: "/evc",

@@ -6,7 +6,7 @@ import { Topbar } from "./topbar";
 
 export function Shell({
   user,
-  unread,
+  unread: initialUnread,
   children,
 }: {
   user: { name: string; email: string; role: string; scopeLabel: string };
@@ -15,6 +15,40 @@ export function Shell({
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [unread, setUnread] = useState(initialUnread);
+
+  useEffect(() => {
+    setUnread(initialUnread);
+  }, [initialUnread]);
+
+  useEffect(() => {
+    let mounted = true;
+    const syncUnread = async () => {
+      try {
+        const res = await fetch("/api/notifications?limit=1");
+        if (res.ok) {
+          const data = await res.json();
+          if (mounted && typeof data.unread === "number") {
+            setUnread(data.unread);
+          }
+        }
+      } catch {
+        // ignore in offline/transient failure
+      }
+    };
+
+    const interval = setInterval(syncUnread, 15000);
+    const onFocus = () => {
+      void syncUnread();
+    };
+    window.addEventListener("focus", onFocus);
+
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, []);
 
   useEffect(() => {
     try {

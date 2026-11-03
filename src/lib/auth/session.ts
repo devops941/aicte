@@ -75,5 +75,5 @@ export async function describeScope(actor: Actor): Promise<string> {
 }
 
 export async function unreadCount(actorId: string): Promise<number> {
-  return prisma.notification.count({ where: { userId: actorId, status: "SENT", readAt: null } });
+  return prisma.notification.count({ where: { userId: actorId, readAt: null, status: { not: "FAILED" } } });
 }

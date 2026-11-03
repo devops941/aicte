@@ -118,6 +118,7 @@ export const NAV_BY_ROLE: Record<string, { href: string; label: string; icon: st
   ],
   EVC_MEMBER: [
     { href: "/dashboard", label: "Dashboard", icon: "LayoutDashboard" },
+    { href: "/cases", label: "Cases", icon: "FolderKanban" },
     { href: "/evc", label: "My Visits", icon: "CalendarClock" },
     { href: "/notifications", label: "Alerts", icon: "Bell" },
   ],

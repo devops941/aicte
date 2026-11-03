@@ -119,10 +119,9 @@ export function Topbar({
           >
             <Bell className="h-4 w-4" />
             {unread > 0 && (
-              <>
-                <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-danger" />
-                <span className="absolute right-1.5 top-1.5 h-2 w-2 animate-pulse-ring rounded-full bg-danger" />
-              </>
+              <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[9px] font-bold text-white shadow-sm ring-2 ring-surface">
+                {unread > 99 ? "99+" : unread}
+              </span>
             )}
           </Link>
 
